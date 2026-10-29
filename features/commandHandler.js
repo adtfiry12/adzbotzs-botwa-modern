@@ -49,10 +49,9 @@ function isOwnerMessage(msg) {
   ];
   return Boolean(
     configuredOwner &&
-      senderJids.some(
-        (senderJid) =>
-          normalizePhoneNumber(senderJid) === configuredOwner,
-      ),
+    senderJids.some(
+      (senderJid) => normalizePhoneNumber(senderJid) === configuredOwner,
+    ),
   );
 }
 
@@ -235,7 +234,7 @@ module.exports = async (piyo, msg) => {
           `╔══════════════════════════════╗\n` +
           `║    *A D Z B O T Z S // OS*   ║\n` +
           `╚══════════════════════════════╝\n` +
-          `_Personal cyber utility interface_\n\n` +
+          `_BOT CREATED BY BORED STUDENT_\n\n` +
           `◈ *OPERATOR*\n` +
           `  ├─ Owner  : ${config.ownerName}\n` +
           `  └─ Engine : Node.js / Baileys\n\n` +
@@ -265,9 +264,11 @@ module.exports = async (piyo, msg) => {
           `┃ ▸ *${prefix}groupinfo*         — info grup\n` +
           `┃ ▸ *${prefix}tagadmin [pesan]* — mention admin\n` +
           `┃ ▸ *${prefix}delete*            — hapus pesan (admin)\n` +
-          `┃ ▸ *${prefix}antilink on/off*   — kontrol anti-link (admin)\n` +
-          `┃ ▸ *${prefix}welcome on/off*    — sambutan grup (admin)\n` +
-          `┃ ▸ *Anti-link*              — auto delete & kick\n` +
+          `┃ ▸ *${prefix}antilink* [on/off]\n` +
+          `┃   _anti-link admin_\n` +
+          `┃ ▸ *${prefix}welcome* [on/off]\n` +
+          `┃   _welcome admin_\n` +
+          `┃ ▸ *Anti-link* — auto delete & kick\n` +
           `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
           menuOwner +
           `⌁ *${prefix}owner* — kontak developer\n\n` +
@@ -482,12 +483,10 @@ module.exports = async (piyo, msg) => {
             stickerMessage,
             "sticker",
           );
-          const imageBuffer = await convertMedia(
-            inputBuffer,
-            "webp",
-            "png",
-            ["-frames:v", "1"],
-          );
+          const imageBuffer = await convertMedia(inputBuffer, "webp", "png", [
+            "-frames:v",
+            "1",
+          ]);
           await piyo.sendMessage(
             from,
             { image: imageBuffer, caption: "⌁ Sticker berhasil dikonversi." },
@@ -864,8 +863,7 @@ module.exports = async (piyo, msg) => {
           const botJid = `${piyo.user.id.split(":")[0]}@s.whatsapp.net`;
           const botParticipant = metadata.participants.find(
             (participant) =>
-              participant.id === botJid ||
-              participant.phoneNumber === botJid,
+              participant.id === botJid || participant.phoneNumber === botJid,
           );
 
           if (!isOwnerMessage(msg) && !senderParticipant?.admin) {
@@ -897,7 +895,9 @@ module.exports = async (piyo, msg) => {
           console.error("Error Delete Message:", error);
           await piyo.sendMessage(
             from,
-            { text: "Gagal menghapus pesan. Pastikan bot punya izin yang cukup." },
+            {
+              text: "Gagal menghapus pesan. Pastikan bot punya izin yang cukup.",
+            },
             { quoted: msg },
           );
         }
@@ -930,10 +930,7 @@ module.exports = async (piyo, msg) => {
             { text: "⌁ AI sedang menganalisis gambar..." },
             { quoted: msg },
           );
-          const imageBuffer = await downloadMediaBuffer(
-            imageMessage,
-            "image",
-          );
+          const imageBuffer = await downloadMediaBuffer(imageMessage, "image");
           const response = await generateVisionAnswer(
             imageBuffer,
             imageMessage.mimetype || "image/jpeg",
@@ -983,7 +980,9 @@ module.exports = async (piyo, msg) => {
         const setting = command;
         const requestedState = q.trim().toLowerCase();
         if (!["on", "off"].includes(requestedState)) {
-          const current = (await getGroupSettings(from))[setting] ? "ON" : "OFF";
+          const current = (await getGroupSettings(from))[setting]
+            ? "ON"
+            : "OFF";
           return await piyo.sendMessage(
             from,
             {
@@ -996,7 +995,9 @@ module.exports = async (piyo, msg) => {
         await setGroupSetting(from, setting, enabled);
         await piyo.sendMessage(
           from,
-          { text: `⌁ ${setting} berhasil diubah ke *${enabled ? "ON" : "OFF"}*.` },
+          {
+            text: `⌁ ${setting} berhasil diubah ke *${enabled ? "ON" : "OFF"}*.`,
+          },
           { quoted: msg },
         );
         break;
@@ -1134,7 +1135,9 @@ module.exports = async (piyo, msg) => {
 
           await piyo.sendMessage(
             from,
-            { text: "⬇️ *Audio sedang diproses dan dikompres, tunggu sebentar...*" },
+            {
+              text: "⬇️ *Audio sedang diproses dan dikompres, tunggu sebentar...*",
+            },
             { quoted: msg },
           );
           const audioBuffer = await downloadAudio(video.url);

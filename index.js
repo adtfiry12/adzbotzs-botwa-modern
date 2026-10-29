@@ -24,53 +24,29 @@ async function startBot() {
     ),
   );
 
-  // 3. Kotak Info & Quotes Keren (Pakai border ganda)
+  const terminalLines = [
+    "╔════════════════════════════════════════════════════════════════╗",
+    "║  ◈ ADZBOTZS // BOT-WA CONTROL NODE                             ║",
+    "╠════════════════════════════════════════════════════════════════╣",
+    `║  ◇ OPERATOR  :: ${String(config.ownerName).padEnd(43)}    ║`,
+    `║  ◇ CONTACT   :: +${String(config.ownerNumber).padEnd(42)}    ║`,
+    "║  ◇ PLATFORM  :: LINUX // BACKEND NODE                          ║",
+    "║  ◇ ENGINE    :: BAILEYS WEBSOCKET                              ║",
+    "╠════════════════════════════════════════════════════════════════╣",
+    "║  [ SYSTEM READY ]  //  SECURE SESSION INITIALIZING             ║",
+    "║  [ SIGNAL ]        //  AWAITING WHATSAPP LINK                  ║",
+    "╚════════════════════════════════════════════════════════════════╝",
+  ];
   console.log(
-    chalk.magenta(
-      " ╔════════════════════════════════════════════════════════════════╗",
-    ),
-  );
-  console.log(
-    chalk.magenta(" ║ ") +
-      chalk.blueBright("👨‍💻 Owner      : ") +
-      chalk.yellow(config.ownerName),
-  );
-  console.log(
-    chalk.magenta(" ║ ") +
-      chalk.blueBright("📱 Kontak     : ") +
-      chalk.yellow(`+${config.ownerNumber}`),
-  );
-  console.log(
-    chalk.magenta(" ║ ") +
-      chalk.blueBright("🖥️  OS Sistem  : ") +
-      chalk.yellow("Lubuntu Linux (Backend PPLG)"),
-  );
-  console.log(
-    chalk.magenta(" ║ ") +
-      chalk.blueBright("🚀 Engine     : ") +
-      chalk.greenBright("Baileys WebSocket"),
-  );
-  console.log(
-    chalk.magenta(
-      " ╠════════════════════════════════════════════════════════════════╣",
-    ),
-  );
-  console.log(
-    chalk.magenta(" ║ ") +
-      chalk.cyan('"Talk is cheap. Show me the code." - Linus Torvalds       ') +
-      chalk.magenta("║"),
-  );
-  console.log(
-    chalk.magenta(" ║ ") +
-      chalk.cyan(
-        "  (Pantang tekan Ctrl+C sebelum errornya hilang!)           ",
-      ) +
-      chalk.magenta("║"),
-  );
-  console.log(
-    chalk.magenta(
-      " ╚════════════════════════════════════════════════════════════════╝\n",
-    ),
+    terminalLines
+      .map((line, index) =>
+        index === 1
+          ? chalk.cyanBright(line)
+          : index === 8 || index === 9
+            ? chalk.cyan(line)
+            : chalk.magenta(line),
+      )
+      .join("\n") + "\n",
   );
 
   const { state, saveCreds } = await useMultiFileAuthState("./session-baileys");
@@ -121,7 +97,7 @@ async function startBot() {
     } else if (connection === "open") {
       console.log(
         chalk.greenBright(
-          "\n✅ MANTAP! Bot udah berhasil tersambung ke WhatsApp!",
+          "\n<-|◈=====CONTROL BOT SUKSES TERSAMBUNG KE WHATSAPP=====◈|->",
         ),
       );
     }
@@ -135,9 +111,7 @@ async function startBot() {
       msg?.message?.imageMessage?.caption ||
       msg?.message?.videoMessage?.caption ||
       "";
-    const isCommand = /^[°•π÷×¶∆£¢€¥®™+✓_=|~!?@#$%^&.©^]/.test(
-      messageText,
-    );
+    const isCommand = /^[°•π÷×¶∆£¢€¥®™+✓_=|~!?@#$%^&.©^]/.test(messageText);
 
     // Pesan dari akun bot sendiri hanya diproses jika memang command.
     // Ini memungkinkan owner memakai nomor bot untuk mengirim .status/.exec
