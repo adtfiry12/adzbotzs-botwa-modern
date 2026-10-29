@@ -160,7 +160,7 @@ MENU_LOGO_PATH=assets/menu-logo.png
 
 DB_HOST=localhost
 DB_USER=root (jika kamu wajib pake username pake username db mu)
-DB_PASSWORD=password_mysql
+DB_PASSWORD=password_mysql (kosongkan jika pake root)
 DB_NAME=adzbotzs
 ```
 
