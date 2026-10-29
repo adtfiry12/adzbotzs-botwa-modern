@@ -16,9 +16,19 @@
 
 ## License
 
-Project ini dirilis dengan lisensi [MIT](./LICENSE). Kamu boleh memakai,
-mengubah, dan menyebarkan ulang project ini selama copyright notice dan
-disclaimer lisensinya tetap disertakan.
+Project ini dirilis dengan lisensi [GNU AGPL-3.0-only](./LICENSE). Kamu boleh
+memakai, mengubah, dan menyebarkan ulang kode ini selama kewajiban AGPL,
+copyright notice, dan disclaimer lisensinya tetap disertakan.
+
+### Creator & Brand Notice
+
+ADZBOTZS dibuat oleh **Aditya Mukti Firmansyah (`adtfiry`)**.
+
+Nama **ADZBOTZS**, logo ADZBOTZS, dan identitas visual cyberpunk project ini
+adalah brand pencipta. Lisensi AGPL memberikan izin atas kode, tetapi tidak
+secara otomatis memberikan izin untuk mengklaim project atau brand ini sebagai
+karya resmi milik pihak lain. Versi modifikasi sebaiknya menyebutkan pencipta
+asli dan menjelaskan perubahan yang dibuat.
 
 ```text
 ╔════════════════════════════════════════════════════════════════╗
@@ -230,7 +240,7 @@ pm2 startup
 Jangan commit `.env`, API key, password database, atau folder
 `session-baileys` ke repository publik.
 
-## Maintainer
+## Creator / Maintainer
 
 Aditya Mukti Firmansyah (`adtfiry`)
 

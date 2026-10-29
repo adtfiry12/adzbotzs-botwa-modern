@@ -8,7 +8,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "description": "Cyberpunk-styled multi-device WhatsApp bot built with Node.js and Baileys",
   "dependencies": {
     "@google/genai": "^2.31.0",
