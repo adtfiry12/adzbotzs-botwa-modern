@@ -10,6 +10,7 @@ const { createVoiceNote } = require("./tts");
 const { downloadAudio } = require("./youtube");
 const { extractMessage } = require("./message");
 const { enforceAntiLink } = require("./groupModeration");
+const { getGroupSettings, setGroupSetting } = require("./groupSettings");
 const {
   registerConversation,
   relayTargetReply,
@@ -264,6 +265,8 @@ module.exports = async (piyo, msg) => {
           `┃ ▸ *${prefix}groupinfo*         — info grup\n` +
           `┃ ▸ *${prefix}tagadmin [pesan]* — mention admin\n` +
           `┃ ▸ *${prefix}delete*            — hapus pesan (admin)\n` +
+          `┃ ▸ *${prefix}antilink on/off*   — kontrol anti-link (admin)\n` +
+          `┃ ▸ *${prefix}welcome on/off*    — sambutan grup (admin)\n` +
           `┃ ▸ *Anti-link*              — auto delete & kick\n` +
           `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
           menuOwner +
@@ -952,6 +955,50 @@ module.exports = async (piyo, msg) => {
             { quoted: msg },
           );
         }
+        break;
+      }
+
+      case "antilink":
+      case "welcome": {
+        if (!from.endsWith("@g.us")) {
+          return await piyo.sendMessage(
+            from,
+            { text: "Fitur ini hanya bisa dipakai di dalam grup." },
+            { quoted: msg },
+          );
+        }
+        const metadata = await piyo.groupMetadata(from);
+        const senderParticipant = metadata.participants.find(
+          (participant) =>
+            participant.id === senderJid ||
+            participant.phoneNumber === senderJid,
+        );
+        if (!isOwnerMessage(msg) && !senderParticipant?.admin) {
+          return await piyo.sendMessage(
+            from,
+            { text: "⌁ Akses ditolak. Pengaturan grup hanya untuk admin." },
+            { quoted: msg },
+          );
+        }
+        const setting = command;
+        const requestedState = q.trim().toLowerCase();
+        if (!["on", "off"].includes(requestedState)) {
+          const current = (await getGroupSettings(from))[setting] ? "ON" : "OFF";
+          return await piyo.sendMessage(
+            from,
+            {
+              text: `Status ${setting}: *${current}*\nGunakan *${prefix}${setting} on* atau *${prefix}${setting} off*.`,
+            },
+            { quoted: msg },
+          );
+        }
+        const enabled = requestedState === "on";
+        await setGroupSetting(from, setting, enabled);
+        await piyo.sendMessage(
+          from,
+          { text: `⌁ ${setting} berhasil diubah ke *${enabled ? "ON" : "OFF"}*.` },
+          { quoted: msg },
+        );
         break;
       }
 

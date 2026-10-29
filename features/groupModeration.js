@@ -1,5 +1,11 @@
+const { getGroupSettings } = require("./groupSettings");
+
 async function enforceAntiLink(piyo, msg, from, body) {
-  if (!from.endsWith("@g.us") || !body.includes("chat.whatsapp.com/")) {
+  if (
+    !from.endsWith("@g.us") ||
+    !body.includes("chat.whatsapp.com/") ||
+    !(await getGroupSettings(from)).antilink
+  ) {
     return false;
   }
 

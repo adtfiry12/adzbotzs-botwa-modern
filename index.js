@@ -8,6 +8,7 @@ const figlet = require("figlet");
 const chalk = require("chalk");
 const HandleMsg = require("./HandleMsg");
 const config = require("./config"); // Memanggil data dari config.js
+const { getGroupSettings } = require("./features/groupSettings");
 
 async function startBot() {
   // 1. Bersihin terminal biar rapi
@@ -80,6 +81,30 @@ async function startBot() {
   });
 
   piyo.ev.on("creds.update", saveCreds);
+
+  piyo.ev.on("group-participants.update", async (update) => {
+    if (
+      update.action !== "add" ||
+      !(await getGroupSettings(update.id)).welcome
+    ) {
+      return;
+    }
+
+    try {
+      const metadata = await piyo.groupMetadata(update.id);
+      const mentions = update.participants;
+      const names = mentions.map((jid) => `@${jid.split("@")[0]}`).join(", ");
+      await piyo.sendMessage(update.id, {
+        text:
+          `╭─〔 WELCOME 〕\n` +
+          `├─ Selamat datang ${names}\n` +
+          `╰─ di *${metadata.subject}*`,
+        mentions,
+      });
+    } catch (error) {
+      console.error("Error welcome group:", error);
+    }
+  });
 
   piyo.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect, qr } = update;

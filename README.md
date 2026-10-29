@@ -31,6 +31,8 @@ Gunakan `.<command>` di bawah ini jika memakai titik.
 | `groupinfo` | `gcinfo` | Menampilkan informasi grup |
 | `tagadmin [pesan]` | `tagadmins` | Mention semua admin grup |
 | `delete` | `del` | Menghapus pesan dengan reply; admin grup atau owner |
+| `antilink on/off` | - | Mengaktifkan atau menonaktifkan anti-link per grup |
+| `welcome on/off` | - | Mengaktifkan atau menonaktifkan sambutan member baru |
 | `hidetag <teks>` | `pengumuman`, `tagall` | Mention seluruh anggota grup |
 | `ping` | - | Mengecek koneksi dan latency bot; tersedia untuk semua pengguna |
 | `status` | `server` | Melihat RAM, uptime, OS, dan versi Node.js; owner saja |
@@ -152,6 +154,8 @@ Setelah session tersimpan, bot dapat melakukan reconnect tanpa scan ulang.
 - Command `.menu`/`.help` mengirim logo dan menu bergaya cyberpunk. Ganti
   `assets/menu-logo.png` dengan gambar sendiri, atau atur `MENU_LOGO_PATH`
   ke path file gambar lain.
+- Pengaturan `.antilink` dan `.welcome` disimpan di MySQL pada tabel
+  `group_settings`.
 
 ## Deployment 24/7
 
