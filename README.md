@@ -1,80 +1,104 @@
 # 🤖 ADZBOTZS - WhatsApp Multi-Device Bot
 
-ADZBOTZS adalah bot WhatsApp cerdas yang dibangun menggunakan arsitektur _API-driven_ dan _Clean Code_. Berjalan di atas Node.js dan Baileys (`@whiskeysockets/baileys`), bot ini dirancang untuk memiliki performa tinggi, minim penggunaan _storage_, dan terintegrasi langsung dengan database MySQL.
+ADZBOTZS adalah bot WhatsApp cerdas yang dibangun menggunakan arsitektur _API-driven_, _Clean Code_, dan terintegrasi penuh dengan sistem _database_ relasional. Berjalan di atas Node.js dan Baileys (`@whiskeysockets/baileys`), bot ini dirancang agar ringan (minim penggunaan _storage_ lokal) karena mendelegasikan proses berat ke _external API_ dan _database_ MySQL.
 
 Proyek ini dikembangkan sebagai portofolio _Back-End Engineering_.
 
-## ✨ Fitur Utama
+## ✨ Fitur Utama Bot
 
-- **🛠️ Utility & Tools**
-  - `!sticker` - Konversi gambar menjadi stiker WebP (Powered by FFmpeg).
-  - `!say` - Text-to-Speech (Voice Note) otomatis (Google TTS API).
-  - `!salin` - Ekstrak teks dari gambar/catatan (Tesseract.js OCR).
-  - `!ai` - Smart Chat AI terintegrasi dengan model Google Gemini 1.5 Flash.
-- **⬇️ Downloader (API-Driven)**
-  - `!tiktok` - Unduh video TikTok tanpa _watermark_.
-  - `!play` - Pencarian dan unduhan audio MP3 dari YouTube.
-- **🎮 Games & Interaksi (MySQL Database)**
-  - `!kuis` - Mini-game tebak-tebakan dinamis dari database MySQL.
-  - `!rank` - Sistem leveling dan XP _real-time_ berbasis aktivitas grup.
-  - `!menfess` - Sistem _routing_ pesan anonim rahasia.
-- **🛡️ Group Moderation & System**
-  - **Auto Anti-Link** - _Middleware_ otomatis penghapus pesan & _kick_ pengirim _link_ grup eksternal.
-  - `!hidetag` - Pengumuman grup (_invisible tag-all_).
-  - `!status` - Monitoring _uptime_ dan RAM server secara _real-time_.
-  - `!exec` - Eksekutor terminal Linux jarak jauh (Akses khusus Owner).
+### 🛠️ Utility & Tools
 
-## 🚀 Prasyarat Sistem
+- `!sticker` - Konversi gambar menjadi stiker WebP secara instan (Powered by FFmpeg).
+- `!say [teks]` - Text-to-Speech (Voice Note) otomatis menggunakan Google TTS.
+- `!salin` - Ekstrak teks dari foto/gambar papan tulis/catatan (Optical Character Recognition via Tesseract.js).
+- `!ai [pertanyaan]` - Asisten pintar _Smart Chat AI_ bertenaga Google Gemini 1.5 Flash.
 
-Sebelum menginstal bot ini, pastikan sistem Anda sudah terpasang:
+### ⬇️ Downloader (API-Driven)
 
-- [Node.js](https://nodejs.org/) (Minimal v18 atau terbaru)
-- [FFmpeg](https://ffmpeg.org/) (Untuk _rendering_ fitur stiker)
-- [MySQL / MariaDB](https://www.mysql.com/) (Untuk fitur Kuis dan Leveling)
+- `!tiktok [link]` - Unduh video TikTok tanpa _watermark_ via Buffer Stream.
+- `!play [judul]` - Pencarian otomatis dan unduhan audio MP3 dari YouTube (Bebas dari limitasi _library_ lokal).
 
-## 🛠️ Instalasi & Konfigurasi
+### 🎮 Games & Interaksi (MySQL Database)
 
-1. **Clone repositori ini**
-   ```bash
-   git clone [https://github.com/USERNAME_GITHUB_LU/adzbotzs-reborn.git](https://github.com/USERNAME_GITHUB_LU/adzbotzs-reborn.git)
-   cd adzbotzs-reborn
-   Install semua dependensi (Library)
-   ```
+- `!kuis` - Mini-game tebak-tebakan IT secara _real-time_ (Soal ditarik dinamis dari tabel MySQL).
+- `!rank` - Sistem Profil, Leveling, dan XP dinamis berbasis aktivitas _chatting_ grup.
+- `!menfess [nomor] [pesan]` - Sistem _routing_ perpesanan anonim yang aman dan rahasia.
 
-Bash
+### 🛡️ Group Moderation & System
+
+- **Auto Anti-Link (Middleware)** - Sistem satpam grup yang otomatis menghapus pesan dan me- _kick_ member yang mempromosikan tautan grup eksternal.
+- `!hidetag [teks]` - Pengumuman grup / _invisible tag-all_ untuk seluruh member.
+- `!status` - Pemantauan _real-time_ sisa RAM dan _Uptime_ server (_Hardware Monitoring_).
+- `!exec [cmd]` - Eksekutor terminal jarak jauh (Akses eksklusif _Owner_).
+
+---
+
+## 🚀 Prasyarat Sistem & Link Download (Tutorial Windows)
+
+Untuk menjalankan bot ini di sistem operasi **Windows**, Anda membutuhkan tiga _software_ utama di bawah ini:
+
+1.  **Node.js (Mesin Utama)**
+    - 🔗 **Download:** [Node.js LTS (Windows Installer)](https://nodejs.org/en/download/)
+    - _Cara Install:_ Tinggal klik _Next_ sampai selesai. Pastikan _opsi_ "Add to PATH" tercentang.
+2.  **XAMPP (Untuk Database MySQL)**
+    - 🔗 **Download:** [XAMPP for Windows](https://www.apachefriends.org/download.html)
+    - _Cara Install:_ Install seperti biasa. Buka _XAMPP Control Panel_, lalu klik **Start** pada modul **MySQL**.
+3.  **FFmpeg (Mesin Pembuat Stiker)**
+    - 🔗 **Download:** [FFmpeg Windows Builds](https://github.com/BtbN/FFmpeg-Builds/releases) (Pilih yang `ffmpeg-master-latest-win64-gpl.zip`)
+    - _Cara Install:_ Ekstrak file ZIP, pindahkan folder ke `C:\ffmpeg`. Buka **Environment Variables** di Windows, cari _Path_, lalu tambahkan _directory_ baru: `C:\ffmpeg\bin`.
+
+---
+
+## 🛠️ Instalasi & Konfigurasi Aman
+
+Sistem ini menggunakan pengamanan kredensial agar _API Key_ dan akses _database_ Anda tidak bocor ke publik. Ikuti langkah instalasi berikut:
+
+**1. Clone Repositori & Install Dependencies**
+Buka Terminal/CMD/PowerShell, lalu jalankan:
+
+```bash
+git clone [https://github.com/USERNAME_GITHUB_LU/adzbotzs-reborn.git](https://github.com/USERNAME_GITHUB_LU/adzbotzs-reborn.git)
+cd adzbotzs-reborn
 npm install
-Konfigurasi Database MySQL
+2. Setup Keamanan (Kredensial & Config)
+Proyek ini mengabaikan file config asli untuk keamanan Git. Anda harus membuat file config dari template yang disediakan:
 
-Buat database baru bernama adzbotzs.
+Copy/Rename file config.example.js menjadi config.js.
 
-Import atau jalankan query tabel users (untuk leveling) dan soal_kuis (untuk game) ke dalam database tersebut.
+Copy/Rename file db.example.js menjadi db.js.
 
-Pastikan username dan password MySQL di dalam file db.js sudah sesuai dengan server lokal Anda.
+Buka config.js menggunakan text editor (seperti VS Code) dan masukkan Nomor WhatsApp Owner serta API Key Google Gemini Anda (dapatkan secara gratis di Google AI Studio).
 
-Konfigurasi Bot (config.js)
-Buat atau edit file config.js dan sesuaikan dengan data Anda:
+3. Setup Database MySQL (via XAMPP)
 
-JavaScript
-module.exports = {
-ownerName: 'adtfiry',
-ownerNumber: '6285191194059',
-botName: 'ADZBOTZS',
-geminiApiKey: 'MASUKKAN_API_KEY_GOOGLE_ANDA_DISINI'
-}
-Jalankan Bot
+Pastikan MySQL di XAMPP sudah berjalan (Start).
+
+Buka browser dan masuk ke http://localhost/phpmyadmin.
+
+Buat database baru dengan nama adzbotzs.
+
+Jalankan query SQL untuk membuat tabel (Tabel users untuk Leveling, dan soal_kuis untuk fitur tebak-tebakan).
+
+Pastikan konfigurasi di db.js Anda sudah sesuai: user: 'root' dan password: '' (kosong, default bawaan XAMPP Windows).
+
+4. Jalankan Bot
+Setelah semua siap, jalankan perintah ini di terminal:
 
 Bash
 npm start
-Scan QR Code
-Pada saat pertama kali dijalankan, bot akan memunculkan QR Code di terminal. Scan QR Code tersebut menggunakan perangkat WhatsApp Anda yang tertaut (Linked Devices).
+Saat terminal memunculkan QR Code, segera scan menggunakan aplikasi WhatsApp Anda melalui menu Perangkat Tertaut (Linked Devices).
 
-👨‍💻 Pengembang
+👨‍💻 Profil Pengembang
 Aditya Mukti Firmansyah (adtfiry)
 
-Siswa Kelas 12 PPLG, SMK Wikrama 1 Jepara
+Siswa Kelas 12, Jurusan Pengembangan Perangkat Lunak dan Gim (PPLG)
 
-Fokus: Back-End Software Engineering
+SMK Wikrama 1 Jepara, Jawa Tengah
 
-Dibuat dengan ❤️ di atas sistem operasi Lubuntu Linux.
+Fokus Portofolio: Back-End Software Engineering & Database Management
 
-<FollowUp> Lu tinggal ganti URL repositori di langkah nomor 1 dengan _link_ GitHub lu nanti. Gimana, tampilan _README_-nya udah cukup _killer_ buat dipajang di GitHub lu sekarang? </FollowUp>
+Terima kasih telah menggunakan ADZBOTZS. Dibuat dengan 💻 dari Jepara untuk ekosistem Open Source.
+
+
+<FollowUp> Lu tinggal *copy* teks di atas ke file `README.md` di VS Code lu, lalu *Save*. Sek
+```
