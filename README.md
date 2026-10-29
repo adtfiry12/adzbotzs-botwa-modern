@@ -11,7 +11,7 @@ Proyek ini dikembangkan sebagai portofolio _Back-End Engineering_.
 - `!sticker` - Konversi gambar menjadi stiker WebP secara instan (Powered by FFmpeg).
 - `!say [teks]` - Text-to-Speech (Voice Note) otomatis menggunakan Google TTS.
 - `!salin` - Ekstrak teks dari foto/gambar papan tulis/catatan (Optical Character Recognition via Tesseract.js).
-- `!ai [pertanyaan]` - Asisten pintar _Smart Chat AI_ bertenaga Google Gemini 1.5 Flash.
+- `!ai [pertanyaan]` - Asisten pintar _Smart Chat AI_ bertenaga Google Gemini.
 
 ### ⬇️ Downloader (API-Driven)
 
@@ -51,7 +51,7 @@ Untuk menjalankan bot ini di sistem operasi **Windows**, Anda membutuhkan tiga _
 
 ## 🛠️ Instalasi & Konfigurasi Aman
 
-Sistem ini menggunakan pengamanan kredensial agar _API Key_ dan akses _database_ Anda tidak bocor ke publik. Ikuti langkah instalasi berikut:
+Sistem ini menggunakan environment variable agar _API Key_ dan akses database tidak disimpan di source code. Jika API key yang lama pernah dibagikan atau masuk Git, segera revoke dan buat key baru di Google AI Studio.
 
 **1. Clone Repositori & Install Dependencies**
 Buka Terminal/CMD/PowerShell, lalu jalankan:
@@ -60,14 +60,22 @@ Buka Terminal/CMD/PowerShell, lalu jalankan:
 git clone [https://github.com/USERNAME_GITHUB_LU/adzbotzs-reborn.git](https://github.com/USERNAME_GITHUB_LU/adzbotzs-reborn.git)
 cd adzbotzs-reborn
 npm install
-2. Setup Keamanan (Kredensial & Config)
-Proyek ini mengabaikan file config asli untuk keamanan Git. Anda harus membuat file config dari template yang disediakan:
+2. Setup Environment
+`config.js` dan `db.js` membaca environment variable. Set variable berikut sebelum `npm start`:
 
-Copy/Rename file config.example.js menjadi config.js.
+```bash
+export OWNER_NAME="adtfiry"
+export OWNER_NUMBER="628xxxxxxxxxx"
+export GEMINI_API_KEY="isi-key-baru"
+export GEMINI_MODEL="gemini-2.5-flash"
+export DB_HOST="localhost"
+export DB_USER="adtz"
+export DB_PASSWORD="password-mysql"
+export DB_NAME="adzbotzs"
+npm start
+```
 
-Copy/Rename file db.example.js menjadi db.js.
-
-Buka config.js menggunakan text editor (seperti VS Code) dan masukkan Nomor WhatsApp Owner serta API Key Google Gemini Anda (dapatkan secara gratis di Google AI Studio).
+`GEMINI_MODEL` dapat diganti jika Google menonaktifkan model tertentu. Bot mencoba model berikutnya jika model utama mengembalikan 404.
 
 3. Setup Database MySQL (via XAMPP)
 
@@ -79,14 +87,25 @@ Buat database baru dengan nama adzbotzs.
 
 Jalankan query SQL untuk membuat tabel (Tabel users untuk Leveling, dan soal_kuis untuk fitur tebak-tebakan).
 
-Pastikan konfigurasi di db.js Anda sudah sesuai: user: 'root' dan password: '' (kosong, default bawaan XAMPP Windows).
+Sesuaikan `DB_USER`, `DB_PASSWORD`, dan `DB_NAME` dengan database Anda.
 
 4. Jalankan Bot
 Setelah semua siap, jalankan perintah ini di terminal:
 
-Bash
 npm start
 Saat terminal memunculkan QR Code, segera scan menggunakan aplikasi WhatsApp Anda melalui menu Perangkat Tertaut (Linked Devices).
+
+## ☁️ Deployment 24/7
+
+Bot hanya hidup selama proses Node.js dan database berjalan. Jadi laptop boleh dimatikan setelah bot dipindahkan ke VPS atau platform cloud. Tidak ada jaminan hosting gratis yang benar-benar tanpa batas atau selamanya; layanan gratis dapat tidur, membatasi CPU/RAM, menghapus filesystem, atau berubah kebijakannya. Untuk Baileys, gunakan VPS/worker yang persistent dan simpan folder `session-baileys` pada disk persisten agar tidak perlu scan QR setiap restart.
+
+Pilihan praktis:
+
+- VPS murah dengan systemd atau PM2 (paling stabil untuk bot WhatsApp).
+- Railway, Render, atau Fly.io untuk eksperimen; cek batas free tier dan gunakan volume persisten.
+- Hindari platform serverless yang mematikan proses lama atau tidak menyediakan filesystem persisten.
+
+Jangan commit folder `session-baileys`, API key, atau password database ke repository publik.
 
 👨‍💻 Profil Pengembang
 Aditya Mukti Firmansyah (adtfiry)

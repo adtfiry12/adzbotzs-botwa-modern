@@ -104,8 +104,12 @@ async function startBot() {
 
   piyo.ev.on("messages.upsert", async (m) => {
     const msg = m.messages[0];
-    if (!msg.key.fromMe && m.type === "notify") {
-      await HandleMsg(piyo, msg);
+    if (msg && !msg.key.fromMe && m.type === "notify") {
+      try {
+        await HandleMsg(piyo, msg);
+      } catch (error) {
+        console.error("Error memproses pesan:", error);
+      }
     }
   });
 }

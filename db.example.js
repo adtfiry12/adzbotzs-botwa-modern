@@ -2,10 +2,10 @@ const mysql = require("mysql2/promise");
 
 // Bikin connection pool biar bot nggak gampang crash kalau banyak yang request barengan
 const db = mysql.createPool({
-  host: "localhost",
-  user: "root", // Default biasanya root
-  password: "", // Isi kalau user pakai password
-  database: "", // Ganti dengan nama database sesukamu
+  host: process.env.DB_HOST || "localhost",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME || "adzbotzs",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
