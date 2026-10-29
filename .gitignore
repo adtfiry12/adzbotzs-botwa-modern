@@ -1,0 +1,4 @@
+node_modules/
+session-baileys/
+config.js
+db.js
