@@ -2,11 +2,12 @@ const axios = require("axios");
 const fs = require("fs");
 const ffmpeg = require("fluent-ffmpeg");
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
-const googleTTS = require("google-tts-api");
 const activeGames = {};
 const config = require("../config");
 const db = require("../db");
 const { generateAnswer } = require("./gemini");
+const { createVoiceNote } = require("./tts");
+const { downloadAudio } = require("./youtube");
 const { extractMessage } = require("./message");
 const { enforceAntiLink } = require("./groupModeration");
 const os = require("os");
@@ -275,7 +276,6 @@ module.exports = async (piyo, msg) => {
         break;
 
       case "say":
-      case "tts":
         if (!q)
           return await piyo.sendMessage(
             from,
@@ -286,20 +286,13 @@ module.exports = async (piyo, msg) => {
           );
 
         try {
-          // 1. Generate URL audio dari server Google (Bahasa Indonesia)
-          const audioUrl = googleTTS.getAudioUrl(q, {
-            lang: "id",
-            slow: false,
-            host: "https://translate.google.com",
-          });
+          const audioBuffer = await createVoiceNote(q);
 
-          // 2. Kirim ke WA sebagai Voice Note
-          // Parameter ptt: true bikin audionya tampil sebagai rekaman suara asli, bukan file lagu MP3
           await piyo.sendMessage(
             from,
             {
-              audio: { url: audioUrl },
-              mimetype: "audio/mp4",
+              audio: audioBuffer,
+              mimetype: "audio/ogg; codecs=opus",
               ptt: true,
             },
             { quoted: msg },
@@ -459,8 +452,12 @@ module.exports = async (piyo, msg) => {
         try {
           const response = await generateAnswer(q);
 
-          // Kirim hasil pemikiran AI ke WA
-          await piyo.sendMessage(from, { text: response }, { quoted: msg });
+          // WhatsApp menolak pesan teks yang terlalu panjang; kirim bertahap.
+          const chunks = response.match(/[\s\S]{1,4000}/g) || [];
+          for (const [index, chunk] of chunks.entries()) {
+            const sendOptions = index === 0 ? { quoted: msg } : {};
+            await piyo.sendMessage(from, { text: chunk }, sendOptions);
+          }
         } catch (err) {
           console.error("Error Gemini AI:", err);
           await piyo.sendMessage(
@@ -573,30 +570,16 @@ module.exports = async (piyo, msg) => {
             { quoted: msg },
           );
 
-          // 3. Eksekusi API Downloader (Contoh pakai API gratisan, karena kita arsitektur API-driven)
-          // URL API ini nge-return JSON berisi link download MP3
-          const apiUrl = `https://aemt.me/download/ytdl?url=${video.url}`;
-          const res = await axios.get(apiUrl);
-
-          if (res.data.status && res.data.result) {
-            const audioUrl = res.data.result.mp3; // Ambil link MP3 dari respon JSON
-
-            // 4. Kirim audio sebagai dokumen atau voice note
-            await piyo.sendMessage(
-              from,
-              {
-                audio: { url: audioUrl },
-                mimetype: "audio/mpeg",
-              },
-              { quoted: msg },
-            );
-          } else {
-            await piyo.sendMessage(
-              from,
-              { text: "❌ Server API lagi down, gagal ngunduh audio." },
-              { quoted: msg },
-            );
-          }
+          const audioBuffer = await downloadAudio(video.url);
+          await piyo.sendMessage(
+            from,
+            {
+              audio: audioBuffer,
+              mimetype: "audio/mpeg",
+              fileName: `${video.title}.mp3`,
+            },
+            { quoted: msg },
+          );
         } catch (err) {
           console.error("Error YT Play:", err);
           await piyo.sendMessage(

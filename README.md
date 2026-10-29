@@ -1,123 +1,169 @@
-# 🤖 ADZBOTZS - WhatsApp Multi-Device Bot
+# ADZBOTZS
 
-ADZBOTZS adalah bot WhatsApp cerdas yang dibangun menggunakan arsitektur _API-driven_, _Clean Code_, dan terintegrasi penuh dengan sistem _database_ relasional. Berjalan di atas Node.js dan Baileys (`@whiskeysockets/baileys`), bot ini dirancang agar ringan (minim penggunaan _storage_ lokal) karena mendelegasikan proses berat ke _external API_ dan _database_ MySQL.
+Bot WhatsApp multi-device berbasis Node.js dan Baileys. Bot ini memakai
+MySQL untuk leveling dan kuis, Google Gemini untuk AI, serta beberapa layanan
+eksternal untuk TTS dan downloader.
 
-Proyek ini dikembangkan sebagai portofolio _Back-End Engineering_.
+## Fitur dan Command
 
-## ✨ Fitur Utama Bot
+Prefix dapat berupa simbol yang didukung bot, misalnya `.`, `!`, atau `#`.
+Gunakan `.<command>` di bawah ini jika memakai titik.
 
-### 🛠️ Utility & Tools
+| Command | Alias | Fungsi |
+| --- | --- | --- |
+| `menu` | `help` | Menampilkan daftar command |
+| `owner` | `creator` | Mengirim kontak owner |
+| `jokes` | - | Mengambil jokes acak |
+| `sticker` | `s`, `stiker` | Mengubah gambar menjadi stiker WebP; bisa memakai gambar dengan caption atau reply gambar |
+| `say <teks>` | - | Mengubah teks menjadi voice note Bahasa Indonesia |
+| `ai <pertanyaan>` | `ask`, `gemini` | Menjawab pertanyaan menggunakan Gemini |
+| `salin` | `ocr` | Membaca teks dari gambar menggunakan OCR; bisa memakai gambar dengan caption atau reply gambar |
+| `tt <link>` | `tiktok` | Mengunduh video TikTok tanpa watermark melalui API eksternal |
+| `play <judul>` | `lagu` | Mencari YouTube lalu mengunduh dan mengirim audio MP3 dengan `yt-dlp` dan FFmpeg |
+| `kuis` | `tebak` | Memulai kuis dari tabel `soal_kuis` selama 60 detik |
+| `rank` | `profile`, `level` | Melihat XP dan level pengguna |
+| `menfess <nomor> <pesan>` | `confess` | Mengirim pesan anonim ke nomor tujuan |
+| `hidetag <teks>` | `pengumuman`, `tagall` | Mention seluruh anggota grup |
+| `status` | `server`, `ping` | Melihat RAM, uptime, OS, dan versi Node.js |
+| `exec <command>` | `cmd`, `terminal` | Menjalankan command server; hanya owner |
 
-- `!sticker` - Konversi gambar menjadi stiker WebP secara instan (Powered by FFmpeg).
-- `!say [teks]` - Text-to-Speech (Voice Note) otomatis menggunakan Google TTS.
-- `!salin` - Ekstrak teks dari foto/gambar papan tulis/catatan (Optical Character Recognition via Tesseract.js).
-- `!ai [pertanyaan]` - Asisten pintar _Smart Chat AI_ bertenaga Google Gemini.
+Selain command, tersedia middleware anti-link grup. Pesan berisi link grup
+WhatsApp dari anggota non-admin akan dihapus dan pengirim dikeluarkan jika
+bot memiliki hak admin.
 
-### ⬇️ Downloader (API-Driven)
+## Struktur Project
 
-- `!tiktok [link]` - Unduh video TikTok tanpa _watermark_ via Buffer Stream.
-- `!play [judul]` - Pencarian otomatis dan unduhan audio MP3 dari YouTube (Bebas dari limitasi _library_ lokal).
+```text
+.
+├── index.js                    # Startup Baileys dan event message
+├── HandleMsg.js                # Adapter tipis ke command handler
+├── features/
+│   ├── commandHandler.js       # Dispatch command dan fitur bot
+│   ├── gemini.js               # Integrasi Google Gen AI
+│   ├── groupModeration.js      # Middleware anti-link
+│   └── message.js              # Ekstraksi tipe dan teks pesan
+├── config.js                   # Membaca konfigurasi dari .env
+├── db.js                       # Membuat pool MySQL dari .env
+└── session-baileys/            # Session login lokal, jangan di-commit
+```
 
-### 🎮 Games & Interaksi (MySQL Database)
+## Persyaratan
 
-- `!kuis` - Mini-game tebak-tebakan IT secara _real-time_ (Soal ditarik dinamis dari tabel MySQL).
-- `!rank` - Sistem Profil, Leveling, dan XP dinamis berbasis aktivitas _chatting_ grup.
-- `!menfess [nomor] [pesan]` - Sistem _routing_ perpesanan anonim yang aman dan rahasia.
+- Node.js 20 atau lebih baru
+- MySQL atau MariaDB
+- FFmpeg yang tersedia di `PATH`
+- `yt-dlp` yang tersedia di `PATH`
+- API key Google AI Studio untuk command AI
+- WhatsApp untuk melakukan scan QR pertama kali
 
-### 🛡️ Group Moderation & System
-
-- **Auto Anti-Link (Middleware)** - Sistem satpam grup yang otomatis menghapus pesan dan me- _kick_ member yang mempromosikan tautan grup eksternal.
-- `!hidetag [teks]` - Pengumuman grup / _invisible tag-all_ untuk seluruh member.
-- `!status` - Pemantauan _real-time_ sisa RAM dan _Uptime_ server (_Hardware Monitoring_).
-- `!exec [cmd]` - Eksekutor terminal jarak jauh (Akses eksklusif _Owner_).
-
----
-
-## 🚀 Prasyarat Sistem & Link Download (Tutorial Windows)
-
-Untuk menjalankan bot ini di sistem operasi **Windows**, Anda membutuhkan tiga _software_ utama di bawah ini:
-
-1.  **Node.js (Mesin Utama)**
-    - 🔗 **Download:** [Node.js LTS (Windows Installer)](https://nodejs.org/en/download/)
-    - _Cara Install:_ Tinggal klik _Next_ sampai selesai. Pastikan _opsi_ "Add to PATH" tercentang.
-2.  **XAMPP (Untuk Database MySQL)**
-    - 🔗 **Download:** [XAMPP for Windows](https://www.apachefriends.org/download.html)
-    - _Cara Install:_ Install seperti biasa. Buka _XAMPP Control Panel_, lalu klik **Start** pada modul **MySQL**.
-3.  **FFmpeg (Mesin Pembuat Stiker)**
-    - 🔗 **Download:** [FFmpeg Windows Builds](https://github.com/BtbN/FFmpeg-Builds/releases) (Pilih yang `ffmpeg-master-latest-win64-gpl.zip`)
-    - _Cara Install:_ Ekstrak file ZIP, pindahkan folder ke `C:\ffmpeg`. Buka **Environment Variables** di Windows, cari _Path_, lalu tambahkan _directory_ baru: `C:\ffmpeg\bin`.
-
----
-
-## 🛠️ Instalasi & Konfigurasi Aman
-
-Sistem ini menggunakan environment variable agar _API Key_ dan akses database tidak disimpan di source code. Jika API key yang lama pernah dibagikan atau masuk Git, segera revoke dan buat key baru di Google AI Studio.
-
-**1. Clone Repositori & Install Dependencies**
-Buka Terminal/CMD/PowerShell, lalu jalankan:
+Untuk Ubuntu/Debian, contoh instalasi FFmpeg dan MySQL:
 
 ```bash
-git clone [https://github.com/USERNAME_GITHUB_LU/adzbotzs-reborn.git](https://github.com/USERNAME_GITHUB_LU/adzbotzs-reborn.git)
+sudo apt update
+sudo apt install ffmpeg mysql-server
+sudo apt install yt-dlp
+```
+
+## Instalasi
+
+```bash
+git clone https://github.com/adtfiry12/adzbotzs-reborn.git
 cd adzbotzs-reborn
 npm install
-2. Setup Environment
-`config.js` dan `db.js` membaca environment variable. Set variable berikut sebelum `npm start`:
+```
+
+Buat database dan tabel yang digunakan bot:
+
+```sql
+CREATE DATABASE adzbotzs;
+USE adzbotzs;
+
+CREATE TABLE users (
+  nomor_wa VARCHAR(32) PRIMARY KEY,
+  xp INT NOT NULL DEFAULT 0,
+  level INT NOT NULL DEFAULT 1
+);
+
+CREATE TABLE soal_kuis (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  soal TEXT NOT NULL,
+  jawaban VARCHAR(255) NOT NULL
+);
+```
+
+## Konfigurasi `.env`
+
+Semua konfigurasi runtime berada di file `.env` pada root project. File ini
+diabaikan Git dan tidak boleh dibagikan atau di-commit.
+
+```env
+OWNER_NAME=adtfiry
+OWNER_NUMBER=628xxxxxxxxxx
+BOT_NAME=ADZBOTZS
+
+GEMINI_API_KEY=tempel_token_baru_di_sini
+GEMINI_MODEL=gemini-flash-latest
+
+DB_HOST=localhost
+DB_USER=adtz
+DB_PASSWORD=password_mysql
+DB_NAME=adzbotzs
+```
+
+Bot menggunakan package resmi `@google/genai` dan alias
+`gemini-flash-latest`, sehingga tidak bergantung pada nama model Flash lama
+yang dapat dipensiunkan. Jangan menaruh API key langsung di `config.js`.
+
+## Menjalankan Bot
 
 ```bash
-export OWNER_NAME="adtfiry"
-export OWNER_NUMBER="628xxxxxxxxxx"
-export GEMINI_API_KEY="isi-key-baru"
-export GEMINI_MODEL="gemini-2.5-flash"
-export DB_HOST="localhost"
-export DB_USER="adtz"
-export DB_PASSWORD="password-mysql"
-export DB_NAME="adzbotzs"
 npm start
 ```
 
-`GEMINI_MODEL` dapat diganti jika Google menonaktifkan model tertentu. Bot mencoba model berikutnya jika model utama mengembalikan 404.
+Scan QR yang muncul di terminal melalui WhatsApp → Perangkat Tertaut.
+Setelah session tersimpan, bot dapat melakukan reconnect tanpa scan ulang.
 
-3. Setup Database MySQL (via XAMPP)
+## Catatan Operasional
 
-Pastikan MySQL di XAMPP sudah berjalan (Start).
+- `.say` mengunduh audio TTS sebagai buffer MP3 sebelum dikirim agar voice note
+  tidak kosong.
+- Request Gemini memiliki timeout 45 detik.
+- Respons Gemini panjang dikirim dalam beberapa pesan agar sesuai batas teks
+  WhatsApp.
+- Folder `session-baileys` harus disimpan di persistent disk saat deployment.
+- MySQL harus dapat diakses dari mesin yang menjalankan bot.
+- Downloader TikTok bergantung pada API eksternal. Downloader YouTube memakai
+  `yt-dlp` lokal; YouTube dapat membatasi format tertentu atau mengembalikan
+  403, sehingga versi `yt-dlp` harus tetap diperbarui.
 
-Buka browser dan masuk ke http://localhost/phpmyadmin.
+## Deployment 24/7
 
-Buat database baru dengan nama adzbotzs.
+Bot tidak akan tetap hidup jika laptop dimatikan. Jalankan di VPS atau worker
+cloud yang prosesnya persistent. VPS dengan systemd atau PM2 biasanya paling
+stabil. Platform free tier dapat sleep, membatasi resource, menghapus
+filesystem, atau mengubah kebijakan, jadi tidak ada jaminan gratis selamanya.
 
-Jalankan query SQL untuk membuat tabel (Tabel users untuk Leveling, dan soal_kuis untuk fitur tebak-tebakan).
+Saat deployment:
 
-Sesuaikan `DB_USER`, `DB_PASSWORD`, dan `DB_NAME` dengan database Anda.
+1. Masukkan seluruh variable `.env` ke environment/secret manager server.
+2. Simpan `session-baileys` pada volume persistent.
+3. Pastikan MySQL tersedia dari server.
+4. Jalankan bot memakai PM2 atau systemd agar otomatis restart.
 
-4. Jalankan Bot
-Setelah semua siap, jalankan perintah ini di terminal:
+Contoh PM2:
 
-npm start
-Saat terminal memunculkan QR Code, segera scan menggunakan aplikasi WhatsApp Anda melalui menu Perangkat Tertaut (Linked Devices).
-
-## ☁️ Deployment 24/7
-
-Bot hanya hidup selama proses Node.js dan database berjalan. Jadi laptop boleh dimatikan setelah bot dipindahkan ke VPS atau platform cloud. Tidak ada jaminan hosting gratis yang benar-benar tanpa batas atau selamanya; layanan gratis dapat tidur, membatasi CPU/RAM, menghapus filesystem, atau berubah kebijakannya. Untuk Baileys, gunakan VPS/worker yang persistent dan simpan folder `session-baileys` pada disk persisten agar tidak perlu scan QR setiap restart.
-
-Pilihan praktis:
-
-- VPS murah dengan systemd atau PM2 (paling stabil untuk bot WhatsApp).
-- Railway, Render, atau Fly.io untuk eksperimen; cek batas free tier dan gunakan volume persisten.
-- Hindari platform serverless yang mematikan proses lama atau tidak menyediakan filesystem persisten.
-
-Jangan commit folder `session-baileys`, API key, atau password database ke repository publik.
-
-👨‍💻 Profil Pengembang
-Aditya Mukti Firmansyah (adtfiry)
-
-Siswa Kelas 12, Jurusan Pengembangan Perangkat Lunak dan Gim (PPLG)
-
-SMK Wikrama 1 Jepara, Jawa Tengah
-
-Fokus Portofolio: Back-End Software Engineering & Database Management
-
-Terima kasih telah menggunakan ADZBOTZS. Dibuat dengan 💻 dari Jepara untuk ekosistem Open Source.
-
-
-<FollowUp> Lu tinggal *copy* teks di atas ke file `README.md` di VS Code lu, lalu *Save*. Sek
+```bash
+npm install --global pm2
+pm2 start index.js --name adzbotzs
+pm2 save
+pm2 startup
 ```
+
+Jangan commit `.env`, API key, password database, atau folder
+`session-baileys` ke repository publik.
+
+## Pengembang
+
+Aditya Mukti Firmansyah (`adtfiry`)
+
+SMK Wikrama 1 Jepara — Pengembangan Perangkat Lunak dan Gim (PPLG)
