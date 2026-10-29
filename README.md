@@ -14,6 +14,12 @@
 > cyberpunk. Jalankan secara bertanggung jawab dan jangan membagikan kredensial
 > server, session WhatsApp, API key, atau password database.
 
+## License
+
+Project ini dirilis dengan lisensi [MIT](./LICENSE). Kamu boleh memakai,
+mengubah, dan menyebarkan ulang project ini selama copyright notice dan
+disclaimer lisensinya tetap disertakan.
+
 ```text
 ╔════════════════════════════════════════════════════════════════╗
 ║  ◈ ADZBOTZS // CYBERPUNK CONTROL NODE                          ║
@@ -146,6 +152,7 @@ CREATE TABLE soal_kuis (
 
 Semua konfigurasi runtime berada di file `.env` pada root project. File ini
 diabaikan Git dan tidak boleh dibagikan atau di-commit.
+Salin `.env.example` menjadi `.env`, lalu isi nilainya sendiri.
 
 ```env
 OWNER_NAME=adtfiry
