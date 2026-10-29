@@ -19,6 +19,7 @@ Gunakan `.<command>` di bawah ini jika memakai titik.
 | `toimg` | `toimage` | Mengubah sticker WebP menjadi gambar PNG |
 | `tomp3` | `toaudio` | Mengubah video atau audio menjadi MP3 |
 | `ai <pertanyaan>` | `ask`, `gemini` | Menjawab pertanyaan menggunakan Gemini |
+| `vision [pertanyaan]` | `describe`, `lihat` | Menganalisis gambar menggunakan Gemini Vision |
 | `salin` | `ocr` | Membaca teks dari gambar menggunakan OCR; bisa memakai gambar dengan caption atau reply gambar |
 | `tt <link>` | `tiktok` | Mengunduh video TikTok tanpa watermark melalui API eksternal |
 | `play <judul>` | `lagu` | Mencari YouTube lalu mengunduh dan mengirim audio MP3 |
@@ -29,6 +30,7 @@ Gunakan `.<command>` di bawah ini jika memakai titik.
 | `afk [alasan]` | - | Mengaktifkan status away dan otomatis kembali saat mengirim pesan |
 | `groupinfo` | `gcinfo` | Menampilkan informasi grup |
 | `tagadmin [pesan]` | `tagadmins` | Mention semua admin grup |
+| `delete` | `del` | Menghapus pesan dengan reply; admin grup atau owner |
 | `hidetag <teks>` | `pengumuman`, `tagall` | Mention seluruh anggota grup |
 | `ping` | - | Mengecek koneksi dan latency bot; tersedia untuk semua pengguna |
 | `status` | `server` | Melihat RAM, uptime, OS, dan versi Node.js; owner saja |

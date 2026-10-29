@@ -69,7 +69,7 @@ async function findAvailableModels() {
   return models;
 }
 
-async function generateAnswer(prompt) {
+async function generateWithGemini(contents) {
   if (!config.geminiApiKey) {
     throw new Error("GEMINI_API_KEY belum dikonfigurasi");
   }
@@ -91,7 +91,7 @@ async function generateAnswer(prompt) {
     try {
       const result = await ai.models.generateContent({
         model,
-        contents: prompt,
+        contents,
         config: { abortSignal: abortController.signal },
       });
 
@@ -120,4 +120,34 @@ async function generateAnswer(prompt) {
   throw lastError;
 }
 
-module.exports = { generateAnswer };
+async function generateAnswer(prompt) {
+  return generateWithGemini(prompt);
+}
+
+async function generateVisionAnswer(imageBuffer, mimeType, prompt) {
+  if (!Buffer.isBuffer(imageBuffer) || imageBuffer.length === 0) {
+    throw new Error("Gambar untuk AI Vision kosong");
+  }
+
+  return generateWithGemini([
+    {
+      role: "user",
+      parts: [
+        {
+          inlineData: {
+            mimeType,
+            data: imageBuffer.toString("base64"),
+          },
+        },
+        {
+          text:
+            prompt ||
+            "Jelaskan isi gambar ini secara detail dalam Bahasa Indonesia. " +
+              "Jika ada teks, salin dan jelaskan bagian pentingnya.",
+        },
+      ],
+    },
+  ]);
+}
+
+module.exports = { generateAnswer, generateVisionAnswer };

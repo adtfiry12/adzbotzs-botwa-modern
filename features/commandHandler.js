@@ -5,7 +5,7 @@ const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 const activeGames = {};
 const config = require("../config");
 const db = require("../db");
-const { generateAnswer } = require("./gemini");
+const { generateAnswer, generateVisionAnswer } = require("./gemini");
 const { createVoiceNote } = require("./tts");
 const { downloadAudio } = require("./youtube");
 const { extractMessage } = require("./message");
@@ -57,6 +57,20 @@ function isOwnerMessage(msg) {
 
 function getQuotedMessage(msg) {
   return msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+}
+
+function getQuotedKey(msg, remoteJid) {
+  const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
+  if (!contextInfo?.stanzaId) return null;
+
+  return {
+    remoteJid,
+    fromMe: Boolean(
+      contextInfo.fromMe || contextInfo.participant === remoteJid,
+    ),
+    id: contextInfo.stanzaId,
+    participant: contextInfo.participant,
+  };
 }
 
 async function downloadMediaBuffer(mediaMessage, mediaType) {
@@ -229,6 +243,7 @@ module.exports = async (piyo, msg) => {
           `┃ ▸ *${prefix}say [teks]*      — teks → voice note\n` +
           `┃ ▸ *${prefix}salin*          — OCR dari foto\n` +
           `┃ ▸ *${prefix}ai [tanya]*     — smart assistant\n` +
+          `┃ ▸ *${prefix}vision [tanya]*  — AI membaca gambar\n` +
           `┃ ▸ *${prefix}ping*            — cek koneksi bot\n` +
           `┃ ▸ *${prefix}toimg*            — stiker → gambar\n` +
           `┃ ▸ *${prefix}tomp3*            — video/audio → MP3\n` +
@@ -248,6 +263,7 @@ module.exports = async (piyo, msg) => {
           `┃ ▸ *${prefix}hidetag [teks]*   — pengumuman\n` +
           `┃ ▸ *${prefix}groupinfo*         — info grup\n` +
           `┃ ▸ *${prefix}tagadmin [pesan]* — mention admin\n` +
+          `┃ ▸ *${prefix}delete*            — hapus pesan (admin)\n` +
           `┃ ▸ *Anti-link*              — auto delete & kick\n` +
           `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
           menuOwner +
@@ -815,6 +831,124 @@ module.exports = async (piyo, msg) => {
           await piyo.sendMessage(
             from,
             { text: "Gagal mengambil daftar admin grup." },
+            { quoted: msg },
+          );
+        }
+        break;
+      }
+
+      // --- FITUR HAPUS PESAN (ADMIN GRUP/OWNER) ---
+      case "delete":
+      case "del": {
+        const quotedKey = getQuotedKey(msg, from);
+        if (!quotedKey) {
+          return await piyo.sendMessage(
+            from,
+            {
+              text: `Reply pesan yang ingin dihapus dengan *${prefix}delete*.`,
+            },
+            { quoted: msg },
+          );
+        }
+
+        if (from.endsWith("@g.us")) {
+          const metadata = await piyo.groupMetadata(from);
+          const senderParticipant = metadata.participants.find(
+            (participant) =>
+              participant.id === senderJid ||
+              participant.phoneNumber === senderJid,
+          );
+          const botJid = `${piyo.user.id.split(":")[0]}@s.whatsapp.net`;
+          const botParticipant = metadata.participants.find(
+            (participant) =>
+              participant.id === botJid ||
+              participant.phoneNumber === botJid,
+          );
+
+          if (!isOwnerMessage(msg) && !senderParticipant?.admin) {
+            return await piyo.sendMessage(
+              from,
+              { text: "⌁ Akses ditolak. Fitur delete hanya untuk admin grup." },
+              { quoted: msg },
+            );
+          }
+
+          if (!botParticipant?.admin && !quotedKey.fromMe) {
+            return await piyo.sendMessage(
+              from,
+              { text: "⌁ Bot harus menjadi admin untuk menghapus pesan ini." },
+              { quoted: msg },
+            );
+          }
+        } else if (!isOwnerMessage(msg)) {
+          return await piyo.sendMessage(
+            from,
+            { text: "⌁ Fitur delete di chat pribadi hanya untuk owner." },
+            { quoted: msg },
+          );
+        }
+
+        try {
+          await piyo.sendMessage(from, { delete: quotedKey });
+        } catch (error) {
+          console.error("Error Delete Message:", error);
+          await piyo.sendMessage(
+            from,
+            { text: "Gagal menghapus pesan. Pastikan bot punya izin yang cukup." },
+            { quoted: msg },
+          );
+        }
+        break;
+      }
+
+      // --- FITUR AI VISION ---
+      case "vision":
+      case "describe":
+      case "lihat": {
+        const quotedMessage = getQuotedMessage(msg);
+        const imageMessage =
+          type === "imageMessage"
+            ? msg.message.imageMessage
+            : quotedMessage?.imageMessage;
+
+        if (!imageMessage) {
+          return await piyo.sendMessage(
+            from,
+            {
+              text: `Kirim foto dengan caption *${prefix}vision* atau reply foto dengan command tersebut.`,
+            },
+            { quoted: msg },
+          );
+        }
+
+        try {
+          await piyo.sendMessage(
+            from,
+            { text: "⌁ AI sedang menganalisis gambar..." },
+            { quoted: msg },
+          );
+          const imageBuffer = await downloadMediaBuffer(
+            imageMessage,
+            "image",
+          );
+          const response = await generateVisionAnswer(
+            imageBuffer,
+            imageMessage.mimetype || "image/jpeg",
+            q,
+          );
+          const chunks = response.match(/[\s\S]{1,4000}/g) || [];
+          for (const [index, chunk] of chunks.entries()) {
+            await piyo.sendMessage(
+              from,
+              { text: chunk },
+              index === 0 ? { quoted: msg } : {},
+            );
+          }
+        } catch (error) {
+          console.error("Error Gemini Vision:", error);
+          await piyo.sendMessage(
+            from,
+            { text: "AI gagal menganalisis gambar. Coba foto lain." },
             { quoted: msg },
           );
         }
