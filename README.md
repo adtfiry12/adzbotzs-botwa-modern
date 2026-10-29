@@ -19,10 +19,11 @@ Gunakan `.<command>` di bawah ini jika memakai titik.
 | `ai <pertanyaan>` | `ask`, `gemini` | Menjawab pertanyaan menggunakan Gemini |
 | `salin` | `ocr` | Membaca teks dari gambar menggunakan OCR; bisa memakai gambar dengan caption atau reply gambar |
 | `tt <link>` | `tiktok` | Mengunduh video TikTok tanpa watermark melalui API eksternal |
-| `play <judul>` | `lagu` | Mencari YouTube lalu mengunduh dan mengirim audio MP3 dengan `yt-dlp` dan FFmpeg |
+| `play <judul>` | `lagu` | Mencari YouTube lalu mengunduh dan mengirim audio MP3 |
 | `kuis` | `tebak` | Memulai kuis dari tabel `soal_kuis` selama 60 detik |
 | `rank` | `profile`, `level` | Melihat XP dan level pengguna |
-| `menfess <nomor> <pesan>` | `confess` | Mengirim pesan anonim ke nomor tujuan |
+| `menfess <nomor> <pesan>` | `confess` | Mengirim pesan anonim ke nomor tujuan dan membuka sesi balasan |
+| `balas <pesan>` | `replymenfess` | Mengirim balasan anonim ke target menfess terakhir |
 | `hidetag <teks>` | `pengumuman`, `tagall` | Mention seluruh anggota grup |
 | `status` | `server`, `ping` | Melihat RAM, uptime, OS, dan versi Node.js |
 | `exec <command>` | `cmd`, `terminal` | Menjalankan command server; hanya owner |
@@ -42,6 +43,8 @@ bot memiliki hak admin.
 │   ├── gemini.js               # Integrasi Google Gen AI
 │   ├── groupModeration.js      # Middleware anti-link
 │   └── message.js              # Ekstraksi tipe dan teks pesan
+├── assets/
+│   └── menu-logo.png           # Logo placeholder untuk menu WhatsApp
 ├── config.js                   # Membaca konfigurasi dari .env
 ├── db.js                       # Membuat pool MySQL dari .env
 └── session-baileys/            # Session login lokal, jangan di-commit
@@ -52,7 +55,6 @@ bot memiliki hak admin.
 - Node.js 20 atau lebih baru
 - MySQL atau MariaDB
 - FFmpeg yang tersedia di `PATH`
-- `yt-dlp` yang tersedia di `PATH`
 - API key Google AI Studio untuk command AI
 - WhatsApp untuk melakukan scan QR pertama kali
 
@@ -61,7 +63,6 @@ Untuk Ubuntu/Debian, contoh instalasi FFmpeg dan MySQL:
 ```bash
 sudo apt update
 sudo apt install ffmpeg mysql-server
-sudo apt install yt-dlp
 ```
 
 ## Instalasi
@@ -104,6 +105,9 @@ BOT_NAME=ADZBOTZS
 GEMINI_API_KEY=tempel_token_baru_di_sini
 GEMINI_MODEL=gemini-flash-latest
 
+# Opsional: path logo menu pengganti
+MENU_LOGO_PATH=assets/menu-logo.png
+
 DB_HOST=localhost
 DB_USER=adtz
 DB_PASSWORD=password_mysql
@@ -133,8 +137,13 @@ Setelah session tersimpan, bot dapat melakukan reconnect tanpa scan ulang.
 - Folder `session-baileys` harus disimpan di persistent disk saat deployment.
 - MySQL harus dapat diakses dari mesin yang menjalankan bot.
 - Downloader TikTok bergantung pada API eksternal. Downloader YouTube memakai
-  `yt-dlp` lokal; YouTube dapat membatasi format tertentu atau mengembalikan
-  403, sehingga versi `yt-dlp` harus tetap diperbarui.
+- Downloader YouTube memakai layanan konversi audio eksternal dan memiliki
+  batas waktu/limit layanan.
+- Sesi menfess disimpan di memory selama 24 jam. Balasan target diteruskan ke
+  pengirim awal, lalu pengirim dapat memakai `.balas <pesan>`.
+- Command `.menu`/`.help` mengirim logo dan menu bergaya cyberpunk. Ganti
+  `assets/menu-logo.png` dengan gambar sendiri, atau atur `MENU_LOGO_PATH`
+  ke path file gambar lain.
 
 ## Deployment 24/7
 

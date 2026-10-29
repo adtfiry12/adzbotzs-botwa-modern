@@ -10,10 +10,20 @@ const { createVoiceNote } = require("./tts");
 const { downloadAudio } = require("./youtube");
 const { extractMessage } = require("./message");
 const { enforceAntiLink } = require("./groupModeration");
+const {
+  registerConversation,
+  relayTargetReply,
+  sendSenderReply,
+} = require("./menfess");
 const os = require("os");
+const path = require("path");
 const { exec } = require("child_process");
 const Tesseract = require("tesseract.js");
 const yts = require("yt-search");
+
+const menuLogoPath = process.env.MENU_LOGO_PATH
+  ? path.resolve(process.env.MENU_LOGO_PATH)
+  : path.join(__dirname, "../assets/menu-logo.png");
 
 module.exports = async (piyo, msg) => {
   try {
@@ -23,6 +33,8 @@ module.exports = async (piyo, msg) => {
     if (!msg?.message || !from) return;
 
     const { type, body } = extractMessage(msg);
+
+    if (await relayTargetReply(piyo, msg, body)) return;
 
     // --- LOGIKA PENGECEKAN GAME ---
     if (activeGames[from]) {
@@ -108,34 +120,50 @@ module.exports = async (piyo, msg) => {
       case "menu":
       case "help":
         const menuUtama =
-          `🤖 *ADZBOTZS - WA BOT* 🤖\n` +
-          `_Proyek Gabut Anak PPLG_\n\n` +
-          `👑 *Owner:* ${config.ownerName}\n` +
-          `💻 *Engine:* Node.js / Baileys\n` +
-          `─────────────────\n\n` +
-          `🛠️ *UTILITY & TOOLS*\n` +
-          `» *${prefix}sticker / s* (Kirim/Reply Gambar)\n` +
-          `» *${prefix}say [teks]* (Bikin Voice Note)\n` +
-          `» *${prefix}salin* (Extract Teks dari Foto)\n` +
-          `» *${prefix}ai [tanya]* (Smart Chat AI)\n\n` +
-          `⬇️ *DOWNLOADER*\n` +
-          `» *${prefix}tt [link]* (Tiktok No WM)\n` +
-          `» *${prefix}play [judul]* (Download MP3)\n\n` +
-          `🎮 *GAMES & SOCIAL*\n` +
-          `» *${prefix}kuis* (Mini Game IT)\n` +
-          `» *${prefix}rank* (Cek Global Level & XP)\n` +
-          `» *${prefix}menfess [nomor] [pesan]*\n` +
-          `» *${prefix}jokes* (Candaan Random)\n\n` +
-          `🛡️ *GRUP & ADMIN*\n` +
-          `» *${prefix}hidetag [teks]* (Pengumuman)\n` +
-          `» _Anti-Link Group (Auto Kick & Delete)_\n\n` +
-          `⚙️ *SYSTEM (OWNER)*\n` +
-          `» *${prefix}status* (Cek RAM & Uptime)\n` +
-          `» *${prefix}owner* (Kontak Developer)\n` +
-          `» *${prefix}exec [cmd]* (Terminal Linux)\n\n` +
-          `_Gunakan bot ini dengan bijak bro!_`;
+          `╔══════════════════════════════╗\n` +
+          `║    *A D Z B O T Z S // OS*   ║\n` +
+          `╚══════════════════════════════╝\n` +
+          `_Personal cyber utility interface_\n\n` +
+          `◈ *OPERATOR*\n` +
+          `  ├─ Owner  : ${config.ownerName}\n` +
+          `  └─ Engine : Node.js / Baileys\n\n` +
+          `┏━━━ ⟡ *TOOLS & INTELLIGENCE*\n` +
+          `┃ ▸ *${prefix}sticker / s*  — gambar → stiker\n` +
+          `┃ ▸ *${prefix}say [teks]*      — teks → voice note\n` +
+          `┃ ▸ *${prefix}salin*          — OCR dari foto\n` +
+          `┃ ▸ *${prefix}ai [tanya]*     — smart assistant\n` +
+          `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `┏━━━ ⟡ *DOWNLOAD NODE*\n` +
+          `┃ ▸ *${prefix}tt [link]*       — TikTok tanpa watermark\n` +
+          `┃ ▸ *${prefix}play [judul]*    — audio MP3\n` +
+          `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `┏━━━ ⟡ *SOCIAL & GAME*\n` +
+          `┃ ▸ *${prefix}kuis*             — mini game IT\n` +
+          `┃ ▸ *${prefix}rank*             — level & XP global\n` +
+          `┃ ▸ *${prefix}menfess [nomor] [pesan]*\n` +
+          `┃ ▸ *${prefix}balas [pesan]*    — balas menfess\n` +
+          `┃ ▸ *${prefix}jokes*            — random jokes\n` +
+          `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `┏━━━ ⟡ *GROUP CONTROL*\n` +
+          `┃ ▸ *${prefix}hidetag [teks]*   — pengumuman\n` +
+          `┃ ▸ Anti-link              — auto delete & kick\n` +
+          `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `┏━━━ ⟡ *ROOT ACCESS*\n` +
+          `┃ ▸ *${prefix}status*           — RAM, uptime, OS\n` +
+          `┃ ▸ *${prefix}owner*            — kontak developer\n` +
+          `┃ ▸ *${prefix}exec [cmd]*       — terminal Linux\n` +
+          `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `⌁ Ketik *${prefix}menu* kapan saja untuk membuka interface.`;
 
-        await piyo.sendMessage(from, { text: menuUtama }, { quoted: msg });
+        if (!fs.existsSync(menuLogoPath)) {
+          throw new Error(`Menu logo tidak ditemukan: ${menuLogoPath}`);
+        }
+
+        await piyo.sendMessage(
+          from,
+          { image: fs.readFileSync(menuLogoPath), caption: menuUtama },
+          { quoted: msg },
+        );
         break;
 
       case "owner":
@@ -540,7 +568,7 @@ module.exports = async (piyo, msg) => {
 
         await piyo.sendMessage(
           from,
-          { text: "⏳ *Lagi nyari lagunya, bentar bro...*" },
+          { text: "⏳ *Lagi mencari dan mengunduh lagunya, bentar bro...*" },
           { quoted: msg },
         );
 
@@ -570,6 +598,11 @@ module.exports = async (piyo, msg) => {
             { quoted: msg },
           );
 
+          await piyo.sendMessage(
+            from,
+            { text: "⬇️ *Audio sedang diproses dan dikompres, tunggu sebentar...*" },
+            { quoted: msg },
+          );
           const audioBuffer = await downloadAudio(video.url);
           await piyo.sendMessage(
             from,
@@ -584,7 +617,9 @@ module.exports = async (piyo, msg) => {
           console.error("Error YT Play:", err);
           await piyo.sendMessage(
             from,
-            { text: "❌ Terjadi kesalahan saat memproses lagu." },
+            {
+              text: `❌ Gagal mengunduh lagu.\n\n${err.message}\n\nCoba judul atau link YouTube lain.`,
+            },
             { quoted: msg },
           );
         }
@@ -639,6 +674,39 @@ module.exports = async (piyo, msg) => {
         break;
 
       // --- FITUR MENFESS (PESAN ANONIM) ---
+      case "balas":
+      case "replymenfess":
+        if (!q) {
+          return await piyo.sendMessage(
+            from,
+            {
+              text: `Tulis balasannya. Contoh: *${prefix}balas Halo juga, apa kabar?*`,
+            },
+            { quoted: msg },
+          );
+        }
+
+        try {
+          const sent = await sendSenderReply(piyo, from, q);
+          await piyo.sendMessage(
+            from,
+            {
+              text: sent
+                ? "✅ Balasan anonim berhasil dikirim ke target."
+                : "⚠️ Tidak ada sesi menfess aktif. Kirim menfess baru terlebih dahulu.",
+            },
+            { quoted: msg },
+          );
+        } catch (err) {
+          console.error("Error Balas Menfess:", err);
+          await piyo.sendMessage(
+            from,
+            { text: "❌ Gagal mengirim balasan menfess." },
+            { quoted: msg },
+          );
+        }
+        break;
+
       case "menfess":
       case "confess":
         // q berisi: "6285xxx Halo apa kabar"
@@ -657,18 +725,37 @@ module.exports = async (piyo, msg) => {
         let targetMenfess = q.substring(0, firstSpace).trim();
         const pesanMenfess = q.substring(firstSpace + 1).trim();
 
-        // Format nomor ke JID WhatsApp (ganti 08 jadi 628 biar Baileys bisa baca)
+        targetMenfess = targetMenfess.replace(/[^\d]/g, "");
         if (targetMenfess.startsWith("0")) {
           targetMenfess = "62" + targetMenfess.slice(1);
+        }
+        if (!/^62\d{8,13}$/.test(targetMenfess) || !pesanMenfess) {
+          return await piyo.sendMessage(
+            from,
+            {
+              text: "Nomor atau pesan menfess tidak valid. Gunakan format 628xxxxxxxxxx lalu isi pesannya.",
+            },
+            { quoted: msg },
+          );
         }
         const jidTarget = targetMenfess + "@s.whatsapp.net";
 
         try {
+          const recipients = await piyo.onWhatsApp(jidTarget);
+          if (!recipients?.some((recipient) => recipient.exists)) {
+            return await piyo.sendMessage(
+              from,
+              { text: "❌ Nomor tujuan tidak terdaftar di WhatsApp." },
+              { quoted: msg },
+            );
+          }
+
           // Teks yang akan diterima oleh target
           const teksKirim = `💌 *MENFESS MASUK!*\n\nAda pesan rahasia dari seseorang buat lu nih:\n\n💬 _"${pesanMenfess}"_\n\n_Pesan ini dikirim secara anonim melalui sistem ADZBOTZS._`;
 
           // Bot ngirim pesan ke nomor target
           await piyo.sendMessage(jidTarget, { text: teksKirim });
+          registerConversation(from, jidTarget);
 
           // Bot ngasih laporan sukses ke pengirim asli
           await piyo.sendMessage(
