@@ -104,7 +104,20 @@ async function startBot() {
 
   piyo.ev.on("messages.upsert", async (m) => {
     const msg = m.messages[0];
-    if (msg && !msg.key.fromMe && m.type === "notify") {
+    const messageText =
+      msg?.message?.conversation ||
+      msg?.message?.extendedTextMessage?.text ||
+      msg?.message?.imageMessage?.caption ||
+      msg?.message?.videoMessage?.caption ||
+      "";
+    const isCommand = /^[°•π÷×¶∆£¢€¥®™+✓_=|~!?@#$%^&.©^]/.test(
+      messageText,
+    );
+
+    // Pesan dari akun bot sendiri hanya diproses jika memang command.
+    // Ini memungkinkan owner memakai nomor bot untuk mengirim .status/.exec
+    // tanpa membuat balasan bot diproses ulang sebagai pesan baru.
+    if (msg && m.type === "notify" && (!msg.key.fromMe || isCommand)) {
       try {
         await HandleMsg(piyo, msg);
       } catch (error) {

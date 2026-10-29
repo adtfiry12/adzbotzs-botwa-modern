@@ -21,9 +21,80 @@ const { exec } = require("child_process");
 const Tesseract = require("tesseract.js");
 const yts = require("yt-search");
 
+const afkUsers = new Map();
+
 const menuLogoPath = process.env.MENU_LOGO_PATH
   ? path.resolve(process.env.MENU_LOGO_PATH)
   : path.join(__dirname, "../assets/menu-logo.png");
+
+function normalizePhoneNumber(value) {
+  const digits = String(value || "")
+    .split(":")[0]
+    .replace(/\D/g, "");
+  if (digits.startsWith("00")) return digits.slice(2);
+  if (digits.startsWith("0")) return `62${digits.slice(1)}`;
+  if (digits.startsWith("8")) return `62${digits}`;
+  return digits;
+}
+
+function isOwnerMessage(msg) {
+  const configuredOwner = normalizePhoneNumber(config.ownerNumber);
+  const senderJids = [
+    msg.key.participant,
+    msg.key.participantAlt,
+    msg.key.senderPn,
+    msg.key.remoteJid,
+    msg.key.remoteJidAlt,
+  ];
+  return Boolean(
+    configuredOwner &&
+      senderJids.some(
+        (senderJid) =>
+          normalizePhoneNumber(senderJid) === configuredOwner,
+      ),
+  );
+}
+
+function getQuotedMessage(msg) {
+  return msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+}
+
+async function downloadMediaBuffer(mediaMessage, mediaType) {
+  const stream = await downloadContentFromMessage(mediaMessage, mediaType);
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  return Buffer.concat(chunks);
+}
+
+function convertMedia(inputBuffer, inputExtension, outputExtension, options) {
+  const baseName = path.join(__dirname, `../temp_${Date.now()}_${process.pid}`);
+  const inputPath = `${baseName}.${inputExtension}`;
+  const outputPath = `${baseName}.${outputExtension}`;
+  fs.writeFileSync(inputPath, inputBuffer);
+
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .addOutputOptions(options)
+      .on("end", () => {
+        try {
+          resolve(fs.readFileSync(outputPath));
+        } catch (error) {
+          reject(error);
+        } finally {
+          for (const file of [inputPath, outputPath]) {
+            if (fs.existsSync(file)) fs.unlinkSync(file);
+          }
+        }
+      })
+      .on("error", (error) => {
+        for (const file of [inputPath, outputPath]) {
+          if (fs.existsSync(file)) fs.unlinkSync(file);
+        }
+        reject(error);
+      })
+      .save(outputPath);
+  });
+}
 
 module.exports = async (piyo, msg) => {
   try {
@@ -36,6 +107,22 @@ module.exports = async (piyo, msg) => {
 
     if (await relayTargetReply(piyo, msg, body)) return;
 
+    const senderJid = msg.key.participant || msg.key.remoteJid;
+    const commandMatch = body.match(
+      /^[°•π÷×¶∆£¢€¥®™+✓_=|~!?@#$%^&.©^]\s*([^\s]+)/i,
+    );
+    const senderAfk = afkUsers.get(senderJid);
+    if (senderAfk && commandMatch?.[1].toLowerCase() !== "afk") {
+      afkUsers.delete(senderJid);
+      await piyo.sendMessage(
+        from,
+        {
+          text: `⌁ Selamat datang kembali${senderAfk.reason ? ` dari "${senderAfk.reason}"` : ""}. Status AFK kamu sudah dinonaktifkan.`,
+        },
+        { quoted: msg },
+      );
+    }
+
     // --- LOGIKA PENGECEKAN GAME ---
     if (activeGames[from]) {
       const game = activeGames[from];
@@ -44,7 +131,10 @@ module.exports = async (piyo, msg) => {
         await piyo.sendMessage(
           from,
           {
-            text: `🎉 *BENAR SEKALI!*\n\nJawaban: *${game.jawaban}*\nSelamat bro, lu emang sepuh! 🥳`,
+            text:
+              `🎉 *BENAR SEKALI!*\n\n` +
+              `Jawaban: *${game.jawaban}*\n` +
+              `Ronde selesai. Kalau mau lanjut, ketik *.kuis* lagi.`,
           },
           { quoted: msg },
         );
@@ -64,7 +154,7 @@ module.exports = async (piyo, msg) => {
       : "";
 
     // --- MIDDLEWARE: SISTEM LEVELING & XP ---
-    const sender = msg.key.participant || msg.key.remoteJid;
+    const sender = senderJid;
     const senderNum = sender.split("@")[0];
 
     try {
@@ -119,6 +209,13 @@ module.exports = async (piyo, msg) => {
     switch (command) {
       case "menu":
       case "help":
+        const menuOwner = isOwnerMessage(msg)
+          ? `┏━━━ ⟡ *OWNER CONSOLE*\n` +
+            `┃ ▸ *${prefix}status*           — monitoring server\n` +
+            `┃ ▸ *${prefix}exec [cmd]*       — terminal Linux\n` +
+            `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+          : "";
+
         const menuUtama =
           `╔══════════════════════════════╗\n` +
           `║    *A D Z B O T Z S // OS*   ║\n` +
@@ -132,6 +229,9 @@ module.exports = async (piyo, msg) => {
           `┃ ▸ *${prefix}say [teks]*      — teks → voice note\n` +
           `┃ ▸ *${prefix}salin*          — OCR dari foto\n` +
           `┃ ▸ *${prefix}ai [tanya]*     — smart assistant\n` +
+          `┃ ▸ *${prefix}ping*            — cek koneksi bot\n` +
+          `┃ ▸ *${prefix}toimg*            — stiker → gambar\n` +
+          `┃ ▸ *${prefix}tomp3*            — video/audio → MP3\n` +
           `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
           `┏━━━ ⟡ *DOWNLOAD NODE*\n` +
           `┃ ▸ *${prefix}tt [link]*       — TikTok tanpa watermark\n` +
@@ -140,19 +240,18 @@ module.exports = async (piyo, msg) => {
           `┏━━━ ⟡ *SOCIAL & GAME*\n` +
           `┃ ▸ *${prefix}kuis*             — mini game IT\n` +
           `┃ ▸ *${prefix}rank*             — level & XP global\n` +
+          `┃ ▸ *${prefix}afk [alasan]*      — status away otomatis\n` +
           `┃ ▸ *${prefix}menfess [nomor] [pesan]*\n` +
-          `┃ ▸ *${prefix}balas [pesan]*    — balas menfess\n` +
           `┃ ▸ *${prefix}jokes*            — random jokes\n` +
           `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
           `┏━━━ ⟡ *GROUP CONTROL*\n` +
           `┃ ▸ *${prefix}hidetag [teks]*   — pengumuman\n` +
-          `┃ ▸ Anti-link              — auto delete & kick\n` +
+          `┃ ▸ *${prefix}groupinfo*         — info grup\n` +
+          `┃ ▸ *${prefix}tagadmin [pesan]* — mention admin\n` +
+          `┃ ▸ *Anti-link*              — auto delete & kick\n` +
           `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-          `┏━━━ ⟡ *ROOT ACCESS*\n` +
-          `┃ ▸ *${prefix}status*           — RAM, uptime, OS\n` +
-          `┃ ▸ *${prefix}owner*            — kontak developer\n` +
-          `┃ ▸ *${prefix}exec [cmd]*       — terminal Linux\n` +
-          `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          menuOwner +
+          `⌁ *${prefix}owner* — kontak developer\n\n` +
           `⌁ Ketik *${prefix}menu* kapan saja untuk membuka interface.`;
 
         if (!fs.existsSync(menuLogoPath)) {
@@ -335,6 +434,118 @@ module.exports = async (piyo, msg) => {
         }
         break;
 
+      // --- KONVERSI STIKER KE GAMBAR ---
+      case "toimg":
+      case "toimage": {
+        const quotedMessage = getQuotedMessage(msg);
+        const stickerMessage =
+          type === "stickerMessage"
+            ? msg.message.stickerMessage
+            : quotedMessage?.stickerMessage;
+
+        if (!stickerMessage) {
+          return await piyo.sendMessage(
+            from,
+            {
+              text: `Reply sticker dengan *${prefix}toimg* untuk mengubahnya menjadi gambar.`,
+            },
+            { quoted: msg },
+          );
+        }
+
+        try {
+          await piyo.sendMessage(
+            from,
+            { text: "⌁ Mengubah sticker menjadi gambar..." },
+            { quoted: msg },
+          );
+          const inputBuffer = await downloadMediaBuffer(
+            stickerMessage,
+            "sticker",
+          );
+          const imageBuffer = await convertMedia(
+            inputBuffer,
+            "webp",
+            "png",
+            ["-frames:v", "1"],
+          );
+          await piyo.sendMessage(
+            from,
+            { image: imageBuffer, caption: "⌁ Sticker berhasil dikonversi." },
+            { quoted: msg },
+          );
+        } catch (error) {
+          console.error("Error toimg:", error);
+          await piyo.sendMessage(
+            from,
+            { text: "Gagal mengubah sticker menjadi gambar." },
+            { quoted: msg },
+          );
+        }
+        break;
+      }
+
+      // --- KONVERSI VIDEO/AUDIO KE MP3 ---
+      case "tomp3":
+      case "toaudio": {
+        const quotedMessage = getQuotedMessage(msg);
+        const mediaMessage =
+          type === "videoMessage"
+            ? msg.message.videoMessage
+            : type === "audioMessage"
+              ? msg.message.audioMessage
+              : quotedMessage?.videoMessage || quotedMessage?.audioMessage;
+        const mediaType =
+          type === "videoMessage" || quotedMessage?.videoMessage
+            ? "video"
+            : "audio";
+
+        if (!mediaMessage) {
+          return await piyo.sendMessage(
+            from,
+            {
+              text: `Kirim atau reply video/audio dengan caption *${prefix}tomp3*.`,
+            },
+            { quoted: msg },
+          );
+        }
+
+        try {
+          await piyo.sendMessage(
+            from,
+            { text: "⌁ Mengonversi media ke MP3..." },
+            { quoted: msg },
+          );
+          const inputBuffer = await downloadMediaBuffer(
+            mediaMessage,
+            mediaType,
+          );
+          const audioBuffer = await convertMedia(
+            inputBuffer,
+            mediaType === "video" ? "mp4" : "ogg",
+            "mp3",
+            ["-vn", "-codec:a", "libmp3lame", "-b:a", "128k"],
+          );
+          await piyo.sendMessage(
+            from,
+            {
+              audio: audioBuffer,
+              mimetype: "audio/mpeg",
+              fileName: "adzbotzs-audio.mp3",
+            },
+            { quoted: msg },
+          );
+        } catch (error) {
+          console.error("Error tomp3:", error);
+          await piyo.sendMessage(
+            from,
+            { text: "Gagal mengonversi media menjadi MP3." },
+            { quoted: msg },
+          );
+        }
+        break;
+      }
+
       // --- FITUR TIKTOK DOWNLOADER (NO WATERMARK) ---
       case "tiktok":
       case "tt":
@@ -397,11 +608,17 @@ module.exports = async (piyo, msg) => {
       // --- FITUR MINI GAME ---
       case "tebak":
       case "kuis":
+      case "kuislagi":
+      case "nextquiz":
         // Cek dulu, jangan sampai orang spam game kalau game sebelumnya belum kelar
         if (activeGames[from]) {
           return await piyo.sendMessage(
             from,
-            { text: "⚠️ Masih ada soal yang belum dijawab di chat ini bro!" },
+            {
+              text:
+                "⚠️ Masih ada soal yang belum dijawab di chat ini.\n" +
+                "Jawab dulu soal sebelumnya atau tunggu sampai waktunya habis.",
+            },
             { quoted: msg },
           );
         }
@@ -427,10 +644,11 @@ module.exports = async (piyo, msg) => {
 
           // Kirim soal ke WA
           const teksKuis =
-            `🎮 *KUIS ANAK IT*\n\n` +
+            `🎮 *KUIS ADZBOTZS // RONDE BARU*\n\n` +
             `❓ *Soal:* ${randomSoal.soal}\n` +
             `⏳ *Waktu:* 60 Detik\n\n` +
-            `_Langsung ketik jawabannya di chat ini!_`;
+            `_Langsung ketik jawabannya di chat ini!_\n` +
+            `_Setelah selesai, ketik *.kuis* untuk ronde berikutnya._`;
 
           await piyo.sendMessage(from, { text: teksKuis }, { quoted: msg });
 
@@ -441,7 +659,10 @@ module.exports = async (piyo, msg) => {
               // Kalau dalam 60 detik memori masih ada (belum dijawab benar), kirim pesan ini
               if (activeGames[from]) {
                 await piyo.sendMessage(from, {
-                  text: `⏰ *WAKTU HABIS!*\n\nSayang sekali, jawabannya adalah: *${randomSoal.jawaban}*`,
+                  text:
+                    `⏰ *WAKTU HABIS!*\n\n` +
+                    `Jawabannya adalah: *${randomSoal.jawaban}*\n` +
+                    `Kalau mau coba lagi, ketik *.kuis*.`,
                 });
                 delete activeGames[from]; // Bersihkan memori
               }
@@ -498,6 +719,108 @@ module.exports = async (piyo, msg) => {
         }
         break;
 
+      // --- FITUR AFK ---
+      case "afk": {
+        const reason = q.trim();
+        afkUsers.set(senderJid, {
+          reason,
+          since: Date.now(),
+        });
+        await piyo.sendMessage(
+          from,
+          {
+            text:
+              `⌁ Status AFK aktif${reason ? `: ${reason}` : "."}\n` +
+              `Kirim pesan lagi untuk kembali online.`,
+          },
+          { quoted: msg },
+        );
+        break;
+      }
+
+      // --- FITUR INFO GRUP ---
+      case "groupinfo":
+      case "gcinfo": {
+        if (!from.endsWith("@g.us")) {
+          return await piyo.sendMessage(
+            from,
+            { text: "Fitur ini hanya bisa dipakai di dalam grup." },
+            { quoted: msg },
+          );
+        }
+
+        try {
+          const metadata = await piyo.groupMetadata(from);
+          const admins = metadata.participants.filter((participant) =>
+            Boolean(participant.admin),
+          ).length;
+          await piyo.sendMessage(
+            from,
+            {
+              text:
+                `╭─〔 GROUP INFO 〕\n` +
+                `├─ Nama    : ${metadata.subject}\n` +
+                `├─ Member  : ${metadata.participants.length}\n` +
+                `├─ Admin   : ${admins}\n` +
+                `├─ ID      : ${metadata.id}\n` +
+                `╰─ Dibuat  : ${metadata.creation ? new Date(metadata.creation * 1000).toLocaleString("id-ID") : "Tidak tersedia"}`,
+            },
+            { quoted: msg },
+          );
+        } catch (error) {
+          console.error("Error Group Info:", error);
+          await piyo.sendMessage(
+            from,
+            { text: "Gagal mengambil informasi grup." },
+            { quoted: msg },
+          );
+        }
+        break;
+      }
+
+      // --- FITUR MENTION ADMIN ---
+      case "tagadmin":
+      case "tagadmins": {
+        if (!from.endsWith("@g.us")) {
+          return await piyo.sendMessage(
+            from,
+            { text: "Fitur ini hanya bisa dipakai di dalam grup." },
+            { quoted: msg },
+          );
+        }
+
+        try {
+          const metadata = await piyo.groupMetadata(from);
+          const adminJids = metadata.participants
+            .filter((participant) => Boolean(participant.admin))
+            .map((participant) => participant.id);
+          if (adminJids.length === 0) {
+            return await piyo.sendMessage(
+              from,
+              { text: "Tidak ada data admin yang tersedia." },
+              { quoted: msg },
+            );
+          }
+
+          await piyo.sendMessage(
+            from,
+            {
+              text: `${q || "⌁ Admin grup, mohon bantu cek pesan ini."}\n\n${adminJids.map((jid) => `@${jid.split("@")[0]}`).join(" ")}`,
+              mentions: adminJids,
+            },
+            { quoted: msg },
+          );
+        } catch (error) {
+          console.error("Error Tag Admin:", error);
+          await piyo.sendMessage(
+            from,
+            { text: "Gagal mengambil daftar admin grup." },
+            { quoted: msg },
+          );
+        }
+        break;
+      }
+
       case "hidetag":
       case "pengumuman":
       case "tagall":
@@ -529,10 +852,40 @@ module.exports = async (piyo, msg) => {
         });
         break;
 
-      // --- FITUR SERVER MONITOR ---
+      // --- PING PUBLIK ---
+      case "ping": {
+        const pingStartedAt = Date.now();
+        await piyo.sendMessage(
+          from,
+          { text: "⌁ Mengukur koneksi..." },
+          { quoted: msg },
+        );
+        const latency = Date.now() - pingStartedAt;
+        await piyo.sendMessage(
+          from,
+          {
+            text:
+              `╭─〔 PING 〕\n` +
+              `├─ Latency : ${latency} ms\n` +
+              `├─ Status  : ONLINE\n` +
+              `╰─ Engine  : ADZBOTZS`,
+          },
+          { quoted: msg },
+        );
+        break;
+      }
+
+      // --- MONITOR SERVER (OWNER ONLY) ---
       case "status":
       case "server":
-      case "ping":
+        if (!isOwnerMessage(msg)) {
+          return await piyo.sendMessage(
+            from,
+            { text: "⌁ Akses ditolak. Status server hanya untuk owner." },
+            { quoted: msg },
+          );
+        }
+
         // Kalkulasi Uptime
         const uptime = process.uptime();
         const jam = Math.floor(uptime / 3600);
@@ -545,11 +898,11 @@ module.exports = async (piyo, msg) => {
         const usedRAM = totalRAM - freeRAM;
 
         const serverInfo =
-          `💻 *STATUS SERVER ADZBOTZS*\n\n` +
-          `*🖥️ OS:* ${os.type()} ${os.release()}\n` +
-          `*🧠 RAM Terpakai:* ${usedRAM} MB / ${totalRAM} MB\n` +
-          `*⏳ Uptime Bot:* ${jam} Jam, ${menit} Menit, ${detik} Detik\n` +
-          `*⚡ Engine:* Node.js ${process.version}`;
+          `╭─〔 SERVER STATUS // OWNER 〕\n` +
+          `├─ OS      : ${os.type()} ${os.release()}\n` +
+          `├─ RAM     : ${usedRAM} MB / ${totalRAM} MB\n` +
+          `├─ Uptime  : ${jam}j ${menit}m ${detik}d\n` +
+          `╰─ Engine  : Node.js ${process.version}`;
 
         await piyo.sendMessage(from, { text: serverInfo }, { quoted: msg });
         break;
@@ -782,12 +1135,11 @@ module.exports = async (piyo, msg) => {
       case "cmd":
       case "terminal":
         // 1. Validasi Keamanan: Pastikan yang ngirim adalah Owner
-        const isOwner = senderNum === config.ownerNumber;
-        if (!isOwner) {
+        if (!isOwnerMessage(msg)) {
           return await piyo.sendMessage(
             from,
             {
-              text: "⚠️ Akses Ditolak! Lu bukan adtfiry, jangan macam-macam sama server gw!",
+              text: "⌁ Akses ditolak. Terminal hanya untuk owner.",
             },
             { quoted: msg },
           );

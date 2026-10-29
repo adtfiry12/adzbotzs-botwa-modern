@@ -16,16 +16,22 @@ Gunakan `.<command>` di bawah ini jika memakai titik.
 | `jokes` | - | Mengambil jokes acak |
 | `sticker` | `s`, `stiker` | Mengubah gambar menjadi stiker WebP; bisa memakai gambar dengan caption atau reply gambar |
 | `say <teks>` | - | Mengubah teks menjadi voice note Bahasa Indonesia |
+| `toimg` | `toimage` | Mengubah sticker WebP menjadi gambar PNG |
+| `tomp3` | `toaudio` | Mengubah video atau audio menjadi MP3 |
 | `ai <pertanyaan>` | `ask`, `gemini` | Menjawab pertanyaan menggunakan Gemini |
 | `salin` | `ocr` | Membaca teks dari gambar menggunakan OCR; bisa memakai gambar dengan caption atau reply gambar |
 | `tt <link>` | `tiktok` | Mengunduh video TikTok tanpa watermark melalui API eksternal |
 | `play <judul>` | `lagu` | Mencari YouTube lalu mengunduh dan mengirim audio MP3 |
-| `kuis` | `tebak` | Memulai kuis dari tabel `soal_kuis` selama 60 detik |
+| `kuis` | `tebak`, `kuislagi`, `nextquiz` | Memulai ronde kuis dari tabel `soal_kuis` selama 60 detik; bisa diulang setelah selesai |
 | `rank` | `profile`, `level` | Melihat XP dan level pengguna |
 | `menfess <nomor> <pesan>` | `confess` | Mengirim pesan anonim ke nomor tujuan dan membuka sesi balasan |
 | `balas <pesan>` | `replymenfess` | Mengirim balasan anonim ke target menfess terakhir |
+| `afk [alasan]` | - | Mengaktifkan status away dan otomatis kembali saat mengirim pesan |
+| `groupinfo` | `gcinfo` | Menampilkan informasi grup |
+| `tagadmin [pesan]` | `tagadmins` | Mention semua admin grup |
 | `hidetag <teks>` | `pengumuman`, `tagall` | Mention seluruh anggota grup |
-| `status` | `server`, `ping` | Melihat RAM, uptime, OS, dan versi Node.js |
+| `ping` | - | Mengecek koneksi dan latency bot; tersedia untuk semua pengguna |
+| `status` | `server` | Melihat RAM, uptime, OS, dan versi Node.js; owner saja |
 | `exec <command>` | `cmd`, `terminal` | Menjalankan command server; hanya owner |
 
 Selain command, tersedia middleware anti-link grup. Pesan berisi link grup
