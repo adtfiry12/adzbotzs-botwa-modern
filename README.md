@@ -16,8 +16,8 @@
 
 ```text
 ╔════════════════════════════════════════════════════════════════╗
-║  ◈ ADZBOTZS // CYBERPUNK CONTROL NODE                         ║
-║  ◇ MEDIA  ◇ AI  ◇ GROUP OPS  ◇ OWNER CONSOLE                 ║
+║  ◈ ADZBOTZS // CYBERPUNK CONTROL NODE                          ║
+║  ◇ MEDIA  ◇ AI  ◇ GROUP OPS  ◇ OWNER CONSOLE                   ║
 ╚════════════════════════════════════════════════════════════════╝
 ```
 
@@ -26,34 +26,34 @@
 Prefix dapat berupa simbol yang didukung bot, misalnya `.`, `!`, atau `#`.
 Gunakan `.<command>` di bawah ini jika memakai titik.
 
-| Command | Alias | Fungsi |
-| --- | --- | --- |
-| `menu` | `help` | Menampilkan daftar command |
-| `owner` | `creator` | Mengirim kontak owner |
-| `jokes` | - | Mengambil jokes acak |
-| `sticker` | `s`, `stiker` | Mengubah gambar menjadi stiker WebP; bisa memakai gambar dengan caption atau reply gambar |
-| `say <teks>` | - | Mengubah teks menjadi voice note Bahasa Indonesia |
-| `toimg` | `toimage` | Mengubah sticker WebP menjadi gambar PNG |
-| `tomp3` | `toaudio` | Mengubah video atau audio menjadi MP3 |
-| `ai <pertanyaan>` | `ask`, `gemini` | Menjawab pertanyaan menggunakan Gemini |
-| `vision [pertanyaan]` | `describe`, `lihat` | Menganalisis gambar menggunakan Gemini Vision |
-| `salin` | `ocr` | Membaca teks dari gambar menggunakan OCR; bisa memakai gambar dengan caption atau reply gambar |
-| `tt <link>` | `tiktok` | Mengunduh video TikTok tanpa watermark melalui API eksternal |
-| `play <judul>` | `lagu` | Mencari YouTube lalu mengunduh dan mengirim audio MP3 |
-| `kuis` | `tebak`, `kuislagi`, `nextquiz` | Memulai ronde kuis dari tabel `soal_kuis` selama 60 detik; bisa diulang setelah selesai |
-| `rank` | `profile`, `level` | Melihat XP dan level pengguna |
-| `menfess <nomor> <pesan>` | `confess` | Mengirim pesan anonim ke nomor tujuan dan membuka sesi balasan |
-| `balas <pesan>` | `replymenfess` | Mengirim balasan anonim ke target menfess terakhir |
-| `afk [alasan]` | - | Mengaktifkan status away dan otomatis kembali saat mengirim pesan |
-| `groupinfo` | `gcinfo` | Menampilkan informasi grup |
-| `tagadmin [pesan]` | `tagadmins` | Mention semua admin grup |
-| `delete` | `del` | Menghapus pesan dengan reply; admin grup atau owner |
-| `antilink on/off` | - | Mengaktifkan atau menonaktifkan anti-link per grup |
-| `welcome on/off` | - | Mengaktifkan atau menonaktifkan sambutan member baru |
-| `hidetag <teks>` | `pengumuman`, `tagall` | Mention seluruh anggota grup |
-| `ping` | - | Mengecek koneksi dan latency bot; tersedia untuk semua pengguna |
-| `status` | `server` | Melihat RAM, uptime, OS, dan versi Node.js; owner saja |
-| `exec <command>` | `cmd`, `terminal` | Terminal server; hanya owner |
+| Command                   | Alias                           | Fungsi                                                                                         |
+| ------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `menu`                    | `help`                          | Menampilkan daftar command                                                                     |
+| `owner`                   | `creator`                       | Mengirim kontak owner                                                                          |
+| `jokes`                   | -                               | Mengambil jokes acak                                                                           |
+| `sticker`                 | `s`, `stiker`                   | Mengubah gambar menjadi stiker WebP; bisa memakai gambar dengan caption atau reply gambar      |
+| `say <teks>`              | -                               | Mengubah teks menjadi voice note Bahasa Indonesia                                              |
+| `toimg`                   | `toimage`                       | Mengubah sticker WebP menjadi gambar PNG                                                       |
+| `tomp3`                   | `toaudio`                       | Mengubah video atau audio menjadi MP3                                                          |
+| `ai <pertanyaan>`         | `ask`, `gemini`                 | Menjawab pertanyaan menggunakan Gemini                                                         |
+| `vision [pertanyaan]`     | `describe`, `lihat`             | Menganalisis gambar menggunakan Gemini Vision                                                  |
+| `salin`                   | `ocr`                           | Membaca teks dari gambar menggunakan OCR; bisa memakai gambar dengan caption atau reply gambar |
+| `tt <link>`               | `tiktok`                        | Mengunduh video TikTok tanpa watermark melalui API eksternal                                   |
+| `play <judul>`            | `lagu`                          | Mencari YouTube lalu mengunduh dan mengirim audio MP3                                          |
+| `kuis`                    | `tebak`, `kuislagi`, `nextquiz` | Memulai ronde kuis dari tabel `soal_kuis` selama 60 detik; bisa diulang setelah selesai        |
+| `rank`                    | `profile`, `level`              | Melihat XP dan level pengguna                                                                  |
+| `menfess <nomor> <pesan>` | `confess`                       | Mengirim pesan anonim ke nomor tujuan dan membuka sesi balasan                                 |
+| `balas <pesan>`           | `replymenfess`                  | Mengirim balasan anonim ke target menfess terakhir                                             |
+| `afk [alasan]`            | -                               | Mengaktifkan status away dan otomatis kembali saat mengirim pesan                              |
+| `groupinfo`               | `gcinfo`                        | Menampilkan informasi grup                                                                     |
+| `tagadmin [pesan]`        | `tagadmins`                     | Mention semua admin grup                                                                       |
+| `delete`                  | `del`                           | Menghapus pesan dengan reply; admin grup atau owner                                            |
+| `antilink on/off`         | -                               | Mengaktifkan atau menonaktifkan anti-link per grup                                             |
+| `welcome on/off`          | -                               | Mengaktifkan atau menonaktifkan sambutan member baru                                           |
+| `hidetag <teks>`          | `pengumuman`, `tagall`          | Mention seluruh anggota grup                                                                   |
+| `ping`                    | -                               | Mengecek koneksi dan latency bot; tersedia untuk semua pengguna                                |
+| `status`                  | `server`                        | Melihat RAM, uptime, OS, dan versi Node.js; owner saja                                         |
+| `exec <command>`          | `cmd`, `terminal`               | Terminal server; hanya owner                                                                   |
 
 Selain command, tersedia middleware anti-link grup. Pesan berisi link grup
 WhatsApp dari anggota non-admin akan dihapus dan pengirim dikeluarkan jika
