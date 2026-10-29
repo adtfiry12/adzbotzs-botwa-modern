@@ -1,10 +1,27 @@
-# ADZBOTZS
+# ADZBOTZS // CYBER UTILITY NODE
 
-Bot WhatsApp multi-device berbasis Node.js dan Baileys. Bot ini memakai
-MySQL untuk leveling dan kuis, Google Gemini untuk AI, serta beberapa layanan
-eksternal untuk TTS dan downloader.
+<p align="center">
+  <img src="./assets/menu-logo.png" alt="ADZBOTZS cyberpunk logo" width="720">
+</p>
 
-## Fitur dan Command
+<p align="center">
+  <strong>Personal WhatsApp automation node for tools, media, AI, and group control.</strong><br>
+  <code>NODE.JS</code> · <code>BAILEYS</code> · <code>MYSQL</code> · <code>GEMINI</code>
+</p>
+
+> [!NOTE]
+> ADZBOTZS adalah bot WhatsApp multi-device dengan antarmuka bergaya
+> cyberpunk. Jalankan secara bertanggung jawab dan jangan membagikan kredensial
+> server, session WhatsApp, API key, atau password database.
+
+```text
+╔════════════════════════════════════════════════════════════════╗
+║  ◈ ADZBOTZS // CYBERPUNK CONTROL NODE                         ║
+║  ◇ MEDIA  ◇ AI  ◇ GROUP OPS  ◇ OWNER CONSOLE                 ║
+╚════════════════════════════════════════════════════════════════╝
+```
+
+## Command Matrix
 
 Prefix dapat berupa simbol yang didukung bot, misalnya `.`, `!`, atau `#`.
 Gunakan `.<command>` di bawah ini jika memakai titik.
@@ -36,11 +53,33 @@ Gunakan `.<command>` di bawah ini jika memakai titik.
 | `hidetag <teks>` | `pengumuman`, `tagall` | Mention seluruh anggota grup |
 | `ping` | - | Mengecek koneksi dan latency bot; tersedia untuk semua pengguna |
 | `status` | `server` | Melihat RAM, uptime, OS, dan versi Node.js; owner saja |
-| `exec <command>` | `cmd`, `terminal` | Menjalankan command server; hanya owner |
+| `exec <command>` | `cmd`, `terminal` | Terminal server; hanya owner |
 
 Selain command, tersedia middleware anti-link grup. Pesan berisi link grup
 WhatsApp dari anggota non-admin akan dihapus dan pengirim dikeluarkan jika
 bot memiliki hak admin.
+
+### Owner Console
+
+Command berikut tidak ditampilkan pada menu publik dan hanya muncul pada menu
+owner yang terverifikasi:
+
+```text
+.status
+.server
+.exec <command>
+```
+
+### Group Control
+
+Pengaturan berikut hanya dapat diubah oleh admin grup atau owner:
+
+```text
+.antilink on
+.antilink off
+.welcome on
+.welcome off
+```
 
 ## Struktur Project
 
@@ -52,6 +91,7 @@ bot memiliki hak admin.
 │   ├── commandHandler.js       # Dispatch command dan fitur bot
 │   ├── gemini.js               # Integrasi Google Gen AI
 │   ├── groupModeration.js      # Middleware anti-link
+│   ├── groupSettings.js        # Pengaturan grup melalui MySQL
 │   └── message.js              # Ekstraksi tipe dan teks pesan
 ├── assets/
 │   └── menu-logo.png           # Logo placeholder untuk menu WhatsApp
@@ -60,7 +100,7 @@ bot memiliki hak admin.
 └── session-baileys/            # Session login lokal, jangan di-commit
 ```
 
-## Persyaratan
+## Runtime Requirements
 
 - Node.js 20 atau lebih baru
 - MySQL atau MariaDB
@@ -75,7 +115,7 @@ sudo apt update
 sudo apt install ffmpeg mysql-server
 ```
 
-## Instalasi
+## Boot Sequence
 
 ```bash
 git clone https://github.com/adtfiry12/adzbotzs-reborn.git
@@ -102,7 +142,7 @@ CREATE TABLE soal_kuis (
 );
 ```
 
-## Konfigurasi `.env`
+## Environment Configuration
 
 Semua konfigurasi runtime berada di file `.env` pada root project. File ini
 diabaikan Git dan tidak boleh dibagikan atau di-commit.
@@ -128,7 +168,7 @@ Bot menggunakan package resmi `@google/genai` dan alias
 `gemini-flash-latest`, sehingga tidak bergantung pada nama model Flash lama
 yang dapat dipensiunkan. Jangan menaruh API key langsung di `config.js`.
 
-## Menjalankan Bot
+## Launch
 
 ```bash
 npm start
@@ -137,7 +177,7 @@ npm start
 Scan QR yang muncul di terminal melalui WhatsApp → Perangkat Tertaut.
 Setelah session tersimpan, bot dapat melakukan reconnect tanpa scan ulang.
 
-## Catatan Operasional
+## Operations Log
 
 - `.say` mengunduh audio TTS sebagai buffer MP3 sebelum dikirim agar voice note
   tidak kosong.
@@ -147,7 +187,7 @@ Setelah session tersimpan, bot dapat melakukan reconnect tanpa scan ulang.
 - Folder `session-baileys` harus disimpan di persistent disk saat deployment.
 - MySQL harus dapat diakses dari mesin yang menjalankan bot.
 - Downloader TikTok bergantung pada API eksternal. Downloader YouTube memakai
-- Downloader YouTube memakai layanan konversi audio eksternal dan memiliki
+  layanan konversi audio eksternal dan memiliki
   batas waktu/limit layanan.
 - Sesi menfess disimpan di memory selama 24 jam. Balasan target diteruskan ke
   pengirim awal, lalu pengirim dapat memakai `.balas <pesan>`.
@@ -157,7 +197,7 @@ Setelah session tersimpan, bot dapat melakukan reconnect tanpa scan ulang.
 - Pengaturan `.antilink` dan `.welcome` disimpan di MySQL pada tabel
   `group_settings`.
 
-## Deployment 24/7
+## Deployment // 24/7
 
 Bot tidak akan tetap hidup jika laptop dimatikan. Jalankan di VPS atau worker
 cloud yang prosesnya persistent. VPS dengan systemd atau PM2 biasanya paling
@@ -183,7 +223,7 @@ pm2 startup
 Jangan commit `.env`, API key, password database, atau folder
 `session-baileys` ke repository publik.
 
-## Pengembang
+## Maintainer
 
 Aditya Mukti Firmansyah (`adtfiry`)
 
