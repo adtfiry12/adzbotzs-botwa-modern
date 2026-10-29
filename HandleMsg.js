@@ -10,6 +10,8 @@ const db = require("./db");
 const os = require("os");
 const { exec } = require("child_process");
 const Tesseract = require("tesseract.js");
+const yts = require("yt-search");
+const genAI = new GoogleGenerativeAI(config.geminiApiKey);
 
 module.exports = async (piyo, msg) => {
   try {
@@ -181,7 +183,6 @@ module.exports = async (piyo, msg) => {
 
         await piyo.sendMessage(from, { text: menuUtama }, { quoted: msg });
         break;
-        s;
 
       case "owner":
       case "creator":
