@@ -97,7 +97,7 @@ async function startBot() {
     } else if (connection === "open") {
       console.log(
         chalk.greenBright(
-          "\n<-|◈=====CONTROL BOT SUKSES TERSAMBUNG KE WHATSAPP=====◈|->",
+          "\n<-|◈====== CONTROL BOT SUKSES TERSAMBUNG KE WHATSAPP ======◈|->",
         ),
       );
     }
