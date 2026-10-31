@@ -131,6 +131,6 @@ startBot();
 const express = require("express");
 const app = express();
 app.get("/", (req, res) => res.send("Server ADZBOTZS Aktif 24 Jam!"));
-app.listen(process.env.PORT || 3000, () =>
+app.listen(process.env.PORT || 8080, () =>
   console.log("Web Server jalan buat pancingan Render"),
 );
