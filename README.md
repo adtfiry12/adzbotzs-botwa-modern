@@ -97,6 +97,8 @@ adzbotzs-reborn/
 ├── db.js                       # Pool koneksi MySQL/TiDB Cloud & auto-create tables
 ├── HandleMsg.js                # Router perantara pesan Baileys
 ├── index.js                    # Core Baileys socket, Dual-Mode Auth, & Express Server
+├── Dockerfile                  # Konfigurasi container otomatis (FFmpeg, yt-dlp, Node.js)
+├── .dockerignore               # Filter file sensitif saat proses build container
 ├── .env.example                # Panduan template variabel lingkungan
 ├── package.json                # Manifest dependensi & script project
 └── README.md                   # Dokumentasi resmi AdzBotZs
@@ -144,6 +146,7 @@ Mode ini digunakan untuk deployment server tanpa perlu menyalakan laptop secara 
 2. **Deploy di Back4app:**
    - Masuk ke dashboard [Back4app Containers](https://www.back4app.com/).
    - Buat New App dan sambungkan ke repository GitHub ini.
+   - Back4app akan **secara otomatis mendeteksi `Dockerfile`** di root repository, lalu menginstall `ffmpeg`, `yt-dlp`, dan semua dependensi secara otomatis saat build container!
    - Atur **Environment Variables** di Back4app:
      - `BOT_NUMBER`: Nomor WhatsApp yang akan dijadikan bot (contoh: `6281234567890`).
      - `PORT`: `8080` (Back4app otomatis memetakan port ini).
