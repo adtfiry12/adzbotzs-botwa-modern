@@ -3,14 +3,19 @@ require("dotenv").config();
 
 const db = mysql.createPool({
   host: process.env.DB_HOST,
-  user: process.env.DB_USER,
+  port: process.env.DB_PORT || 4000,
+  user: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  database: process.env.DB_DATABASE,
+  ssl: {
+    minVersion: "TLSv1.2",
+    rejectUnauthorized: true,
+  },
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
 });
 
-console.log("🔌 Modul Database MySQL Siap!");
+console.log("🔌 Modul Database MySQL (TiDB) Siap!");
 
 module.exports = db;
