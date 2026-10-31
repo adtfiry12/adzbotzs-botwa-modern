@@ -81,7 +81,7 @@ async function downloadMediaBuffer(mediaMessage, mediaType) {
 }
 
 function convertMedia(inputBuffer, inputExtension, outputExtension, options) {
-  const baseName = path.join(__dirname, `../temp_${Date.now()}_${process.pid}`);
+  const baseName = path.join(os.tmpdir(), `temp_${Date.now()}_${process.pid}`);
   const inputPath = `${baseName}.${inputExtension}`;
   const outputPath = `${baseName}.${outputExtension}`;
   fs.writeFileSync(inputPath, inputBuffer);
@@ -274,15 +274,19 @@ module.exports = async (piyo, msg) => {
           `⌁ *${prefix}owner* — kontak developer\n\n` +
           `⌁ Ketik *${prefix}menu* kapan saja untuk membuka interface.`;
 
-        if (!fs.existsSync(menuLogoPath)) {
-          throw new Error(`Menu logo tidak ditemukan: ${menuLogoPath}`);
+        if (fs.existsSync(menuLogoPath)) {
+          await piyo.sendMessage(
+            from,
+            { image: fs.readFileSync(menuLogoPath), caption: menuUtama },
+            { quoted: msg },
+          );
+        } else {
+          await piyo.sendMessage(
+            from,
+            { text: menuUtama },
+            { quoted: msg },
+          );
         }
-
-        await piyo.sendMessage(
-          from,
-          { image: fs.readFileSync(menuLogoPath), caption: menuUtama },
-          { quoted: msg },
-        );
         break;
 
       case "owner":
@@ -361,9 +365,10 @@ module.exports = async (piyo, msg) => {
               mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
             }
 
-            // 2. Bikin nama file temporary (sementara)
-            const tempFile = `./temp_${Date.now()}.jpg`;
-            const outFile = `./temp_${Date.now()}.webp`;
+            // 2. Bikin nama file temporary di os.tmpdir()
+            const id = Date.now();
+            const tempFile = path.join(os.tmpdir(), `temp_${id}.jpg`);
+            const outFile = path.join(os.tmpdir(), `temp_${id}.webp`);
             fs.writeFileSync(tempFile, mediaBuffer);
 
             // 3. Konversi gambar ke format stiker WebP pakai FFmpeg
@@ -433,13 +438,13 @@ module.exports = async (piyo, msg) => {
           );
 
         try {
-          const audioBuffer = await createVoiceNote(q);
+          const res = await createVoiceNote(q);
 
           await piyo.sendMessage(
             from,
             {
-              audio: audioBuffer,
-              mimetype: "audio/ogg; codecs=opus",
+              audio: res.audio || res,
+              mimetype: res.mimetype || "audio/ogg; codecs=opus",
               ptt: true,
             },
             { quoted: msg },
@@ -448,7 +453,7 @@ module.exports = async (piyo, msg) => {
           console.error("Error TTS:", err);
           await piyo.sendMessage(
             from,
-            { text: "❌ Server suaranya lagi serak bro." },
+            { text: `❌ Gagal memproses suara: ${err.message}` },
             { quoted: msg },
           );
         }
@@ -1108,45 +1113,48 @@ module.exports = async (piyo, msg) => {
         );
 
         try {
-          // 1. Cari video di YouTube berdasarkan judul
+          // 1. Cari video di YouTube berdasarkan judul atau tautan
           const search = await yts(q);
-          const video = search.videos[0]; // Ambil hasil pencarian teratas
+          const video = search.videos?.[0] || search;
 
-          if (!video)
+          if (!video || (!video.url && !video.videoId))
             return await piyo.sendMessage(
               from,
-              { text: "❌ Lagunya nggak ketemu bro." },
+              { text: "❌ Lagu atau video YouTube tidak ditemukan." },
               { quoted: msg },
             );
 
+          const videoUrl =
+            video.url || `https://www.youtube.com/watch?v=${video.videoId}`;
+          const videoTitle = video.title || "YouTube Audio";
+
           // 2. Kirim info lagu & Thumbnail
           const infoLagu =
-            `🎵 *YOUTUBE MUSIC*\n\n` +
-            `*📌 Judul:* ${video.title}\n` +
-            `*⏱️ Durasi:* ${video.timestamp}\n` +
-            `*👁️ Views:* ${video.views}\n\n` +
-            `_Sedang mengirim audio, tunggu sebentar..._`;
+            `🎵 *YOUTUBE MUSIC // ADZBOTZS*\n\n` +
+            `*📌 Judul:* ${videoTitle}\n` +
+            `*⏱️ Durasi:* ${video.timestamp || "-"}\n` +
+            `*👁️ Views:* ${video.views ? Number(video.views).toLocaleString("id-ID") : "-"}\n\n` +
+            `_Sedang memproses audio, tunggu sebentar..._`;
 
-          await piyo.sendMessage(
-            from,
-            { image: { url: video.thumbnail }, caption: infoLagu },
-            { quoted: msg },
-          );
+          if (video.thumbnail) {
+            await piyo.sendMessage(
+              from,
+              { image: { url: video.thumbnail }, caption: infoLagu },
+              { quoted: msg },
+            );
+          }
 
-          await piyo.sendMessage(
-            from,
-            {
-              text: "⬇️ *Audio sedang diproses dan dikompres, tunggu sebentar...*",
-            },
-            { quoted: msg },
-          );
-          const audioBuffer = await downloadAudio(video.url);
+          const audioBuffer = await downloadAudio(videoUrl);
+          const safeTitle = videoTitle
+            .replace(/[\\/:*?"<>|]/g, "")
+            .slice(0, 60);
+
           await piyo.sendMessage(
             from,
             {
               audio: audioBuffer,
               mimetype: "audio/mpeg",
-              fileName: `${video.title}.mp3`,
+              fileName: `${safeTitle}.mp3`,
             },
             { quoted: msg },
           );
@@ -1155,7 +1163,7 @@ module.exports = async (piyo, msg) => {
           await piyo.sendMessage(
             from,
             {
-              text: `❌ Gagal mengunduh lagu.\n\n${err.message}\n\nCoba judul atau link YouTube lain.`,
+              text: `❌ Gagal mengunduh lagu: ${err.message}\nCoba judul atau link YouTube lain.`,
             },
             { quoted: msg },
           );
