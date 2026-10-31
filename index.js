@@ -6,14 +6,12 @@ const pino = require("pino");
 const figlet = require("figlet");
 const chalk = require("chalk");
 const HandleMsg = require("./HandleMsg");
-const config = require("./config"); // Memanggil data dari config.js
+const config = require("./config");
 const { getGroupSettings } = require("./features/groupSettings");
 
 async function startBot() {
-  // 1. Bersihin terminal biar rapi
   console.clear();
 
-  // 2. Cetak Banner ASCII dengan font 'Slant' biar miring dan garang
   console.log(
     chalk.cyanBright(
       figlet.textSync(config.botName, {
@@ -53,18 +51,30 @@ async function startBot() {
   const piyo = makeWASocket({
     auth: state,
     logger: pino({ level: "silent" }),
-    printQRInTerminal: false, // Matikan sistem QR Code di terminal
-    browser: ["Ubuntu", "Chrome", "20.0.04"], // Browser dummy wajib untuk pairing code
+    printQRInTerminal: false,
+    browser: ["Ubuntu", "Chrome", "20.0.04"],
   });
 
   piyo.ev.on("creds.update", saveCreds);
 
-  // 3. Logika Eksekusi Pairing Code
   if (!piyo.authState.creds.registered) {
     setTimeout(async () => {
-      const noWaBot = "6285191194059"; // Ganti kalau nomor bot berubah, wajib tanpa tanda + atau spasi
+      // Ambil nomor dari variabel Back4app dan bersihkan simbol/spasi
+      let rawNumber = process.env.BOT_NUMBER;
+
+      if (!rawNumber) {
+        console.log(
+          chalk.bgRed.white(
+            " ⚠️ ERROR: Variabel BOT_NUMBER belum diisi di env Back4app! ⚠️ ",
+          ),
+        );
+        return;
+      }
+
+      const cleanNumber = rawNumber.replace(/[^0-9]/g, "");
+
       try {
-        const code = await piyo.requestPairingCode(noWaBot);
+        const code = await piyo.requestPairingCode(cleanNumber);
         console.log(
           chalk.bgRed.white(`\n========================================`),
         );
@@ -140,7 +150,6 @@ async function startBot() {
 
 startBot();
 
-// --- DUMMY WEB SERVER BUAT BACK4APP ---
 const express = require("express");
 const app = express();
 app.get("/", (req, res) => res.send("Server ADZBOTZS Aktif 24 Jam!"));
