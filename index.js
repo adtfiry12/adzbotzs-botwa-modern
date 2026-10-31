@@ -3,7 +3,6 @@ const {
   useMultiFileAuthState,
 } = require("@whiskeysockets/baileys");
 const pino = require("pino");
-const qrcode = require("qrcode-terminal");
 const figlet = require("figlet");
 const chalk = require("chalk");
 const HandleMsg = require("./HandleMsg");
@@ -54,9 +53,30 @@ async function startBot() {
   const piyo = makeWASocket({
     auth: state,
     logger: pino({ level: "silent" }),
+    printQRInTerminal: false, // Matikan sistem QR Code di terminal
+    browser: ["Ubuntu", "Chrome", "20.0.04"], // Browser dummy wajib untuk pairing code
   });
 
   piyo.ev.on("creds.update", saveCreds);
+
+  // 3. Logika Eksekusi Pairing Code
+  if (!piyo.authState.creds.registered) {
+    setTimeout(async () => {
+      const noWaBot = "6285191194059"; // Ganti kalau nomor bot berubah, wajib tanpa tanda + atau spasi
+      try {
+        const code = await piyo.requestPairingCode(noWaBot);
+        console.log(
+          chalk.bgRed.white(`\n========================================`),
+        );
+        console.log(chalk.bgRed.white(` ⚠️ KODE PAIRING LU: ${code} ⚠️ `));
+        console.log(
+          chalk.bgRed.white(`========================================\n`),
+        );
+      } catch (err) {
+        console.log("Gagal minta kode pairing: ", err);
+      }
+    }, 3000);
+  }
 
   piyo.ev.on("group-participants.update", async (update) => {
     if (
@@ -83,12 +103,7 @@ async function startBot() {
   });
 
   piyo.ev.on("connection.update", (update) => {
-    const { connection, lastDisconnect, qr } = update;
-
-    if (qr) {
-      console.log(chalk.green("» Scan QR Code ini pakai WhatsApp lu:"));
-      qrcode.generate(qr, { small: true });
-    }
+    const { connection, lastDisconnect } = update;
 
     if (connection === "close") {
       const shouldReconnect = lastDisconnect.error?.output?.statusCode !== 401;
@@ -113,9 +128,6 @@ async function startBot() {
       "";
     const isCommand = /^[°•π÷×¶∆£¢€¥®™+✓_=|~!?@#$%^&.©^]/.test(messageText);
 
-    // Pesan dari akun bot sendiri hanya diproses jika memang command.
-    // Ini memungkinkan owner memakai nomor bot untuk mengirim .status/.exec
-    // tanpa membuat balasan bot diproses ulang sebagai pesan baru.
     if (msg && m.type === "notify" && (!msg.key.fromMe || isCommand)) {
       try {
         await HandleMsg(piyo, msg);
@@ -127,10 +139,11 @@ async function startBot() {
 }
 
 startBot();
-// --- DUMMY WEB SERVER BUAT RENDER.COM ---
+
+// --- DUMMY WEB SERVER BUAT BACK4APP ---
 const express = require("express");
 const app = express();
 app.get("/", (req, res) => res.send("Server ADZBOTZS Aktif 24 Jam!"));
 app.listen(process.env.PORT || 8080, () =>
-  console.log("Web Server jalan buat pancingan Render"),
+  console.log("Web Server jalan buat pancingan Back4app"),
 );
