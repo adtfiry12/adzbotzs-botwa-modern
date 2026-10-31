@@ -149,7 +149,7 @@ async function startBot() {
 }
 
 startBot();
-
+// nyambung he hosting
 const express = require("express");
 const app = express();
 app.get("/", (req, res) => res.send("Server ADZBOTZS Aktif 24 Jam!"));
