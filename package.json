@@ -7,7 +7,7 @@
     "start": "node index.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Aditya Mukti Firmansyah (adtfiry12)",
   "license": "AGPL-3.0-only",
   "description": "Multi-device WhatsApp bot built with Node.js and Baileys",
   "dependencies": {

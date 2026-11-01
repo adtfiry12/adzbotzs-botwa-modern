@@ -134,3 +134,11 @@ Gunakan `.menu` untuk melihat akses cepat. Gunakan `.tools`, `.group`,
 ## Lisensi
 
 Project ini menggunakan [AGPL-3.0-only](./LICENSE).
+
+## Hak Cipta
+
+Copyright (c) 2026 Aditya Mukti Firmansyah (adtfiry12).
+
+Project ini dibuat dan dikembangkan oleh Aditya Mukti Firmansyah dengan
+branding `adtfiry12`. Penggunaan, perubahan, dan distribusi project mengikuti
+ketentuan [AGPL-3.0-only](./LICENSE).
