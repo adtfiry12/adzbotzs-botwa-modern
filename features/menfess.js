@@ -18,6 +18,7 @@ function getActiveConversation(conversation) {
     return null;
   }
 
+  conversation.expiresAt = Date.now() + CONVERSATION_TTL_MS;
   return conversation;
 }
 
@@ -32,14 +33,17 @@ async function relayTargetReply(piyo, msg, body) {
   await piyo.sendMessage(conversation.senderJid, {
     text:
       `╭─〔 BALASAN MENFESS 〕\n` +
-      `Target membalas:\n\n_“${body.trim()}”_\n\n` +
-      `Balas dengan *.balas <pesan>* untuk mengirim jawaban anonim.`,
+      `├─ Penerima membalas:\n` +
+      `│  _“${body.trim()}”_\n` +
+      `╰─ Balas dengan *.balas <pesan>* untuk meneruskan jawaban anonim.`,
   });
 
   return true;
 }
 
 async function sendSenderReply(piyo, senderJid, text) {
+  if (!text?.trim()) return false;
+
   const conversation = getActiveConversation(
     conversationsBySender.get(senderJid),
   );
@@ -51,7 +55,7 @@ async function sendSenderReply(piyo, senderJid, text) {
   await piyo.sendMessage(conversation.targetJid, {
     text:
       `╭─〔 BALASAN MENFESS 〕\n` +
-      `Ada balasan anonim untuk lu:\n\n_“${text.trim()}”_`,
+      `╰─ Ada balasan anonim:\n\n_“${text.trim()}”_`,
   });
 
   return true;
