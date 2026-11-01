@@ -99,7 +99,8 @@ lama.
 | `MENU_LOGO_PATH` | Path gambar menu opsional. |
 
 Tabel `users`, `group_settings`, dan `soal_kuis` dibuat otomatis saat koneksi
-database berhasil.
+database berhasil. Kolom `rules` pada `group_settings` ditambahkan otomatis pada
+database lama.
 
 ## Command
 
@@ -107,15 +108,19 @@ Prefix umum yang didukung: `.`, `!`, dan `#`.
 
 | Kelompok | Command |
 | --- | --- |
-| Umum | `menu`, `owner`, `ping`, `jokes`, `afk` |
+| Menu | `menu`, `tools`, `download`, `social`, `group`, `utility`, `menfess`, `panel` |
+| Umum | `owner`, `ping`, `jokes`, `afk`, `cuaca` |
 | Media | `sticker`, `toimg`, `tomp3`, `say`, `salin` |
 | AI | `ai`, `vision` |
 | Download | `tt`, `play` |
-| Sosial | `kuis`, `rank`, `menfess`, `balas` |
-| Grup | `groupinfo`, `tagadmin`, `hidetag`, `delete`, `antilink`, `welcome` |
-| Owner | `status`, `exec` |
+| Sosial | `kuis`, `rank`, `quote`, `reminder` |
+| Menfess | `menfess`, `balas`, `menfessinfo`, `menfessstop` |
+| Grup | `groupinfo`, `tagadmin`, `hidetag`, `delete`, `kick`, `rules`, `antilink`, `welcome` |
+| Utility | `calc`, `cuaca`, `quote`, `reminder` |
+| Owner | `status`, `exec`, `cmdstats` |
 
-Gunakan `.menu` untuk melihat alias dan format lengkap command.
+Gunakan `.menu` untuk info singkat, lalu buka command index langsung dengan
+`.tools`, `.group`, `.utility`, `.menfess`, atau `.panel` untuk owner.
 
 ## Troubleshooting
 

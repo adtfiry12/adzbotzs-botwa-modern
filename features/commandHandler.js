@@ -27,6 +27,8 @@ const { enforceAntiLink } = require("./groupModeration");
 const { getGroupSettings, setGroupSetting } = require("./groupSettings");
 const {
   registerConversation,
+  endConversation,
+  getConversation,
   relayTargetReply,
   sendSenderReply,
 } = require("./menfess");
@@ -35,10 +37,34 @@ const Tesseract = require("tesseract.js");
 const yts = require("yt-search");
 
 const afkUsers = new Map();
+const reminderTimers = new Map();
+const commandUsage = new Map();
 
 const menuLogoPath = process.env.MENU_LOGO_PATH
   ? path.resolve(process.env.MENU_LOGO_PATH)
   : path.join(__dirname, "../assets/menu-logo.png");
+
+function formatPanel(title, lines) {
+  const content = Array.isArray(lines) ? lines : [lines];
+  return (
+    `┏━━━ ⟡ *${title}*\n` +
+    content.map((line) => `┃ ▸ ${line}`).join("\n") +
+    `\n┗━━━━━━━━━━━━━━━━━━━━━━━━━━`
+  );
+}
+
+async function sendBotMessage(piyo, jid, payload, options) {
+  const nextPayload = { ...payload };
+  for (const field of ["text", "caption"]) {
+    if (
+      typeof nextPayload[field] === "string" &&
+      !nextPayload[field].startsWith("┏━━━ ⟡")
+    ) {
+      nextPayload[field] = formatPanel("NOTICE", [nextPayload[field]]);
+    }
+  }
+  return piyo.sendMessage(jid, nextPayload, options);
+}
 
 function normalizePhoneNumber(value) {
   const digits = String(value || "")
@@ -110,6 +136,7 @@ function convertMedia(inputBuffer, inputExtension, outputExtension, options) {
           for (const file of [inputPath, outputPath]) {
             if (fs.existsSync(file)) fs.unlinkSync(file);
           }
+
         }
       })
       .on("error", (error) => {
@@ -120,6 +147,115 @@ function convertMedia(inputBuffer, inputExtension, outputExtension, options) {
       })
       .save(outputPath);
   });
+}
+
+function buildMenu(prefix, category, owner) {
+  const menus = {
+    main:
+      `╔══════════════════════════════╗\n` +
+      `║    *A D Z B O T Z S // OS*   ║\n` +
+      `╚══════════════════════════════╝\n` +
+      `_BOT CREATED BY BORED STUDENT_\n\n` +
+      `◈ *OPERATOR NODE*\n` +
+      `  ├─ Owner  : ${config.ownerName}\n` +
+      `  ├─ Created: ADZBOTZS project\n` +
+      `  └─ Engine : Node.js / Baileys\n\n` +
+      `┏━━━ ⟡ *QUICK ACCESS*\n` +
+      `┃ ▸ *${prefix}owner*          — kontak owner\n` +
+      `┃ ▸ *${prefix}ping*           — cek koneksi\n` +
+      `┃ ▸ *${prefix}jokes*          — jokes acak\n` +
+      `┃ ▸ *${prefix}afk [alasan]*   — status away\n` +
+      `┃ ▸ *${prefix}cuaca [kota]*   — info cuaca\n` +
+      `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `┏━━━ ⟡ *COMMAND INDEX*\n` +
+      `┃ ▸ *${prefix}tools*           — media dan AI\n` +
+      `┃ ▸ *${prefix}download*        — TikTok dan YouTube\n` +
+      `┃ ▸ *${prefix}social*          — game dan level\n` +
+      `┃ ▸ *${prefix}group*           — kontrol grup\n` +
+      `┃ ▸ *${prefix}utility*         — alat bantu\n` +
+      `┃ ▸ *${prefix}menfess*         — pesan anonim\n` +
+      (owner
+        ? `┃ ▸ *${prefix}panel*           — owner console\n`
+        : "") +
+      `┗━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `⌁ Ketik *${prefix}menu* kapan saja untuk membuka interface.`,
+    tools:
+      `╔══════════════════════════════╗\n` +
+      `║       *A D Z B O T Z S*      ║\n` +
+      `╚══════════════════════════════╝\n` +
+      `┏━━━ ⟡ *TOOLS & INTELLIGENCE*\n` +
+      `┃ ▸ *${prefix}sticker / s* — gambar ke stiker\n` +
+      `┃ ▸ *${prefix}toimg*        — stiker ke gambar\n` +
+      `┃ ▸ *${prefix}tomp3*        — media ke MP3\n` +
+      `┃ ▸ *${prefix}say [teks]*   — voice note\n` +
+      `┃ ▸ *${prefix}salin*        — OCR dari foto\n` +
+      `┃ ▸ *${prefix}ai [tanya]*   — Gemini text\n` +
+      `┃ ▸ *${prefix}vision*       — Gemini vision\n` +
+      `┗━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    download:
+      `╔══════════════════════════════╗\n` +
+      `║       *A D Z B O T Z S*      ║\n` +
+      `╚══════════════════════════════╝\n` +
+      `┏━━━ ⟡ *DOWNLOAD NODE*\n` +
+      `┃ ▸ *${prefix}tt [link]*    — TikTok\n` +
+      `┃ ▸ *${prefix}play [judul]* — YouTube audio\n` +
+      `┗━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    social:
+      `╔══════════════════════════════╗\n` +
+      `║       *A D Z B O T Z S*      ║\n` +
+      `╚══════════════════════════════╝\n` +
+      `┏━━━ ⟡ *SOCIAL & GAME*\n` +
+      `┃ ▸ *${prefix}kuis*          — kuis IT\n` +
+      `┃ ▸ *${prefix}rank*          — level dan XP\n` +
+      `┃ ▸ *${prefix}afk [alasan]*  — status away\n` +
+      `┃ ▸ *${prefix}jokes*         — jokes acak\n` +
+      `┃ ▸ *${prefix}cuaca [kota]*  — info cuaca\n` +
+      `┗━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    group:
+      `╔══════════════════════════════╗\n` +
+      `║       *A D Z B O T Z S*      ║\n` +
+      `╚══════════════════════════════╝\n` +
+      `┏━━━ ⟡ *GROUP CONTROL*\n` +
+      `┃ ▸ *${prefix}groupinfo*       — info grup\n` +
+      `┃ ▸ *${prefix}tagadmin [pesan]* — mention admin\n` +
+      `┃ ▸ *${prefix}hidetag [pesan]* — mention semua\n` +
+      `┃ ▸ *${prefix}delete*          — hapus pesan\n` +
+      `┃ ▸ *${prefix}antilink on/off*\n` +
+      `┃ ▸ *${prefix}welcome on/off*\n` +
+      `┃ ▸ *${prefix}rules [teks]*   — aturan grup\n` +
+      `┃ ▸ *${prefix}kick @user*      — keluarkan anggota\n` +
+      `┗━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    utility:
+      `╔══════════════════════════════╗\n` +
+      `║       *A D Z B O T Z S*      ║\n` +
+      `╚══════════════════════════════╝\n` +
+      `┏━━━ ⟡ *UTILITY NODE*\n` +
+      `┃ ▸ *${prefix}calc [rumus]*\n` +
+      `┃ ▸ *${prefix}reminder [menit] [pesan]*\n` +
+      `┃ ▸ *${prefix}quote*          — kutipan acak\n` +
+      `┃ ▸ *${prefix}cuaca [kota]*   — info cuaca\n` +
+      `┗━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    menfess:
+      `╔══════════════════════════════╗\n` +
+      `║       *A D Z B O T Z S*      ║\n` +
+      `╚══════════════════════════════╝\n` +
+      `┏━━━ ⟡ *MENFESS NETWORK*\n` +
+      `┃ ▸ *${prefix}menfess [nomor] [pesan]*\n` +
+      `┃ ▸ *${prefix}balas [pesan]* — balas anonim\n` +
+      `┃ ▸ *${prefix}menfessinfo*   — status sesi\n` +
+      `┃ ▸ *${prefix}menfessstop*   — akhiri sesi\n` +
+      `┗━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    owner:
+      `╔══════════════════════════════╗\n` +
+      `║       *A D Z B O T Z S*      ║\n` +
+      `╚══════════════════════════════╝\n` +
+      `┏━━━ ⟡ *OWNER CONSOLE*\n` +
+      `┃ ▸ *${prefix}status*       — status server\n` +
+      `┃ ▸ *${prefix}exec [command]* — terminal\n` +
+      `┃ ▸ *${prefix}cmdstats*     — statistik command\n` +
+      `┗━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+  };
+  return menus[category] || menus.main;
 }
 
 module.exports = async (piyo, msg) => {
@@ -141,7 +277,7 @@ module.exports = async (piyo, msg) => {
     const senderAfk = afkUsers.get(senderJid);
     if (senderAfk && commandMatch?.[1].toLowerCase() !== "afk") {
       afkUsers.delete(senderJid);
-      await piyo.sendMessage(
+      await sendBotMessage(piyo,
         from,
         {
           text: `⌁ Selamat datang kembali${senderAfk.reason ? ` dari "${senderAfk.reason}"` : ""}. Status AFK kamu sudah dinonaktifkan.`,
@@ -155,7 +291,7 @@ module.exports = async (piyo, msg) => {
       const game = activeGames[from];
       // Cek apakah pesan user sama dengan jawaban di memori
       if (body.toLowerCase().trim() === game.jawaban.toLowerCase()) {
-        await piyo.sendMessage(
+        await sendBotMessage(piyo,
           from,
           {
             text:
@@ -208,8 +344,11 @@ module.exports = async (piyo, msg) => {
           currentXp -= xpNeeded; // Sisakan kelebihan XP
 
           // Kirim notifikasi kalau naik level (opsional, bisa lu komen kalau dirasa spam)
-          await piyo.sendMessage(from, {
-            text: `╭─〔 LEVEL UP 〕\n├─ Selamat @${senderNum}\n╰─ Level ${currentLevel} aktif.`,
+          await sendBotMessage(piyo, from, {
+            text: formatPanel("LEVEL UP", [
+              `Selamat @${senderNum}`,
+              `Level ${currentLevel} aktif.`,
+            ]),
             mentions: [sender],
           });
         }
@@ -232,6 +371,62 @@ module.exports = async (piyo, msg) => {
     const q = args.join(" ");
 
     console.log(`[CMD] ${prefix}${command} dari ${from}`);
+    commandUsage.set(command, (commandUsage.get(command) || 0) + 1);
+
+    if (command === "menu" || command === "help") {
+      const requestedCategory = q.trim().toLowerCase() || "main";
+      const category =
+        requestedCategory === "owner" && !isOwnerMessage(msg)
+          ? "main"
+          : requestedCategory;
+      const menuText = buildMenu(prefix, category, isOwnerMessage(msg));
+      if (fs.existsSync(menuLogoPath) && category === "main") {
+        await sendBotMessage(piyo,
+          from,
+          { image: fs.readFileSync(menuLogoPath), caption: menuText },
+          { quoted: msg },
+        );
+      } else {
+        await sendBotMessage(piyo, from, { text: menuText }, { quoted: msg });
+      }
+      return;
+    }
+
+    const categoryAliases = {
+      tools: "tools",
+      download: "download",
+      social: "social",
+      group: "group",
+      utility: "utility",
+      menfess: "menfess",
+      panel: "owner",
+    };
+    if (
+      categoryAliases[command] &&
+      (!q.trim() || command !== "menfess") &&
+      (command !== "panel" || isOwnerMessage(msg))
+    ) {
+      await sendBotMessage(piyo,
+        from,
+        {
+          text: buildMenu(
+            prefix,
+            categoryAliases[command],
+            isOwnerMessage(msg),
+          ),
+        },
+        { quoted: msg },
+      );
+      return;
+    }
+    if (command === "panel" && !isOwnerMessage(msg)) {
+      await sendBotMessage(piyo,
+        from,
+        { text: "× Akses ditolak. Panel hanya untuk owner." },
+        { quoted: msg },
+      );
+      return;
+    }
 
     switch (command) {
       case "menu":
@@ -288,13 +483,13 @@ module.exports = async (piyo, msg) => {
           `⌁ Ketik *${prefix}menu* kapan saja untuk membuka interface.`;
 
         if (fs.existsSync(menuLogoPath)) {
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { image: fs.readFileSync(menuLogoPath), caption: menuUtama },
             { quoted: msg },
           );
         } else {
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: menuUtama },
             { quoted: msg },
@@ -312,7 +507,7 @@ module.exports = async (piyo, msg) => {
           `TEL;type=CELL;type=VOICE;waid=${config.ownerNumber}:+${config.ownerNumber}\n` +
           "END:VCARD";
 
-        await piyo.sendMessage(
+        await sendBotMessage(piyo,
           from,
           {
             contacts: {
@@ -329,13 +524,13 @@ module.exports = async (piyo, msg) => {
           const res = await axios.get(
             "https://candaan-api.vercel.app/api/text/random",
           );
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: res.data.data },
             { quoted: msg },
           );
         } catch (e) {
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "Waduh, server API-nya lagi ngambek bro." },
             { quoted: msg },
@@ -355,7 +550,7 @@ module.exports = async (piyo, msg) => {
             ?.imageMessage;
 
         if (isImage || isQuotedImage) {
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "⌁ *Bentar, lagi di-render jadi stiker...*" },
             { quoted: msg },
@@ -388,7 +583,7 @@ module.exports = async (piyo, msg) => {
             ffmpeg(tempFile)
               .on("error", (err) => {
                 console.error("FFmpeg Error:", err);
-                piyo.sendMessage(
+                sendBotMessage(piyo,
                   from,
                   { text: "× Gagal bikin stiker bro." },
                   { quoted: msg },
@@ -397,7 +592,7 @@ module.exports = async (piyo, msg) => {
               })
               .on("end", () => {
                 // 4. Kirim stikernya ke WA
-                piyo.sendMessage(
+                sendBotMessage(piyo,
                   from,
                   { sticker: fs.readFileSync(outFile) },
                   { quoted: msg },
@@ -423,14 +618,14 @@ module.exports = async (piyo, msg) => {
               .save(outFile);
           } catch (err) {
             console.error("Download Error:", err);
-            await piyo.sendMessage(
+            await sendBotMessage(piyo,
               from,
               { text: "× Gagal narik gambar dari server WA." },
               { quoted: msg },
             );
           }
         } else {
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             {
               text: `Kirim foto dengan caption *${prefix}sticker* atau reply foto dengan *${prefix}sticker*`,
@@ -442,7 +637,7 @@ module.exports = async (piyo, msg) => {
 
       case "say":
         if (!q)
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: `Teksnya mana bro? Contoh: *${prefix}say Bot ini buatan anak back-end*`,
@@ -453,7 +648,7 @@ module.exports = async (piyo, msg) => {
         try {
           const res = await createVoiceNote(q);
 
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             {
               audio: res.audio || res,
@@ -464,7 +659,7 @@ module.exports = async (piyo, msg) => {
           );
         } catch (err) {
           console.error("Error TTS:", err);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: `× Gagal memproses suara: ${err.message}` },
             { quoted: msg },
@@ -482,7 +677,7 @@ module.exports = async (piyo, msg) => {
             : quotedMessage?.stickerMessage;
 
         if (!stickerMessage) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: `Reply sticker dengan *${prefix}toimg* untuk mengubahnya menjadi gambar.`,
@@ -492,7 +687,7 @@ module.exports = async (piyo, msg) => {
         }
 
         try {
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "⌁ Mengubah sticker menjadi gambar..." },
             { quoted: msg },
@@ -505,14 +700,14 @@ module.exports = async (piyo, msg) => {
             "-frames:v",
             "1",
           ]);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { image: imageBuffer, caption: "⌁ Sticker berhasil dikonversi." },
             { quoted: msg },
           );
         } catch (error) {
           console.error("Error toimg:", error);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "Gagal mengubah sticker menjadi gambar." },
             { quoted: msg },
@@ -537,7 +732,7 @@ module.exports = async (piyo, msg) => {
             : "audio";
 
         if (!mediaMessage) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: `Kirim atau reply video/audio dengan caption *${prefix}tomp3*.`,
@@ -547,7 +742,7 @@ module.exports = async (piyo, msg) => {
         }
 
         try {
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "⌁ Mengonversi media ke MP3..." },
             { quoted: msg },
@@ -562,7 +757,7 @@ module.exports = async (piyo, msg) => {
             "mp3",
             ["-vn", "-codec:a", "libmp3lame", "-b:a", "128k"],
           );
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             {
               audio: audioBuffer,
@@ -573,7 +768,7 @@ module.exports = async (piyo, msg) => {
           );
         } catch (error) {
           console.error("Error tomp3:", error);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "Gagal mengonversi media menjadi MP3." },
             { quoted: msg },
@@ -586,7 +781,7 @@ module.exports = async (piyo, msg) => {
       case "tiktok":
       case "tt":
         if (!q)
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: `Link TikTok-nya mana bro? Contoh: *${prefix}tt https://vt.tiktok.com/xxxxxx*`,
@@ -595,7 +790,7 @@ module.exports = async (piyo, msg) => {
           );
 
         // Kasih respon loading biar user tahu botnya lagi kerja
-        await piyo.sendMessage(
+        await sendBotMessage(piyo,
           from,
           { text: "⌁ *Sedang narik video dari TikTok, tunggu bentar...*" },
           { quoted: msg },
@@ -614,16 +809,16 @@ module.exports = async (piyo, msg) => {
             const author = res.data.data.author.nickname; // Ambil nama uploader
 
             // Kirim video langsung ke chat WA
-            await piyo.sendMessage(
+            await sendBotMessage(piyo,
               from,
               {
                 video: { url: videoUrl },
-                caption: `╭─〔 TIKTOK 〕\n├─ Kreator: ${author}\n├─ Judul: ${title}\n╰─ ADZBOTZS`,
+                caption: `╭─〔 TIKTOK 〕\n├─ Kreator: ${author}\n├─ Judul: ${title}\n╰─ Selesai`,
               },
               { quoted: msg },
             );
           } else {
-            await piyo.sendMessage(
+            await sendBotMessage(piyo,
               from,
               {
                 text: "× Gagal ngambil video. Pastikan linknya bener dan videonya nggak di-private.",
@@ -633,7 +828,7 @@ module.exports = async (piyo, msg) => {
           }
         } catch (err) {
           console.error("Error TikTok Downloader:", err);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "× Server API lagi down atau link nggak valid." },
             { quoted: msg },
@@ -648,7 +843,7 @@ module.exports = async (piyo, msg) => {
       case "nextquiz":
         // Cek dulu, jangan sampai orang spam game kalau game sebelumnya belum kelar
         if (activeGames[from]) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text:
@@ -667,7 +862,7 @@ module.exports = async (piyo, msg) => {
 
           // Jaga-jaga kalau tabel soal di database lu ternyata masih kosong
           if (rows.length === 0) {
-            return await piyo.sendMessage(
+            return await sendBotMessage(piyo,
               from,
               {
                 text: "! Waduh, bank soal di database MySQL masih kosong bro!",
@@ -679,14 +874,14 @@ module.exports = async (piyo, msg) => {
           const randomSoal = rows[0];
 
           // Kirim soal ke WA
-          const teksKuis =
-            `╭─〔 KUIS // RONDE BARU 〕\n` +
-            `├─ Soal: ${randomSoal.soal}\n` +
-            `├─ Waktu: 60 detik\n` +
-            `╰─ Jawab langsung di chat.\n\n` +
-            `_Setelah selesai, ketik *.kuis* untuk ronde berikutnya._`;
+          const teksKuis = formatPanel("KUIS // RONDE BARU", [
+            `Soal: ${randomSoal.soal}`,
+            "Waktu: 60 detik",
+            "Jawab langsung di chat.",
+            "Ketik *.kuis* untuk ronde berikutnya.",
+          ]);
 
-          await piyo.sendMessage(from, { text: teksKuis }, { quoted: msg });
+          await sendBotMessage(piyo, from, { text: teksKuis }, { quoted: msg });
 
           // Simpan state game ke memori dengan timer 60 detik
           activeGames[from] = {
@@ -694,11 +889,11 @@ module.exports = async (piyo, msg) => {
             timeout: setTimeout(async () => {
               // Kalau dalam 60 detik memori masih ada (belum dijawab benar), kirim pesan ini
               if (activeGames[from]) {
-                await piyo.sendMessage(from, {
-                  text:
-                    `╭─〔 WAKTU HABIS 〕\n` +
-                    `├─ Jawaban: *${randomSoal.jawaban}*\n` +
-                    `╰─ Ketik *.kuis* untuk ronde baru.`,
+                await sendBotMessage(piyo, from, {
+                  text: formatPanel("WAKTU HABIS", [
+                    `Jawaban: *${randomSoal.jawaban}*`,
+                    "Ketik *.kuis* untuk ronde baru.",
+                  ]),
                 });
                 delete activeGames[from]; // Bersihkan memori
               }
@@ -706,7 +901,7 @@ module.exports = async (piyo, msg) => {
           };
         } catch (error) {
           console.error("Error DB Kuis:", error);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "× Gagal narik soal! Cek koneksi MySQL lu di terminal." },
             { quoted: msg },
@@ -719,7 +914,7 @@ module.exports = async (piyo, msg) => {
       case "ask":
       case "gemini":
         if (!q)
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: `Mau nanya apa bro? Contoh: *${prefix}ai tolong buatin fungsi array di PHP*`,
@@ -728,7 +923,7 @@ module.exports = async (piyo, msg) => {
           );
 
         // Kasih respon indikator loading
-        await piyo.sendMessage(
+        await sendBotMessage(piyo,
           from,
           { text: "⌁ *Bentar bro, AI lagi mikir...*" },
           { quoted: msg },
@@ -741,11 +936,11 @@ module.exports = async (piyo, msg) => {
           const chunks = response.match(/[\s\S]{1,4000}/g) || [];
           for (const [index, chunk] of chunks.entries()) {
             const sendOptions = index === 0 ? { quoted: msg } : {};
-            await piyo.sendMessage(from, { text: chunk }, sendOptions);
+            await sendBotMessage(piyo, from, { text: chunk }, sendOptions);
           }
         } catch (err) {
           console.error("Error Gemini AI:", err);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             {
               text: "× Waduh, otak AI-nya lagi nge-hang bro. Coba lagi nanti.",
@@ -762,12 +957,13 @@ module.exports = async (piyo, msg) => {
           reason,
           since: Date.now(),
         });
-        await piyo.sendMessage(
+        await sendBotMessage(piyo,
           from,
           {
-            text:
-              `⌁ Status AFK aktif${reason ? `: ${reason}` : "."}\n` +
-              `Kirim pesan lagi untuk kembali online.`,
+            text: formatPanel("AFK STATUS", [
+              `Status aktif${reason ? `: ${reason}` : "."}`,
+              "Kirim pesan lagi untuk kembali online.",
+            ]),
           },
           { quoted: msg },
         );
@@ -778,7 +974,7 @@ module.exports = async (piyo, msg) => {
       case "groupinfo":
       case "gcinfo": {
         if (!from.endsWith("@g.us")) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             { text: "Fitur ini hanya bisa dipakai di dalam grup." },
             { quoted: msg },
@@ -790,22 +986,22 @@ module.exports = async (piyo, msg) => {
           const admins = metadata.participants.filter((participant) =>
             Boolean(participant.admin),
           ).length;
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             {
-              text:
-                `╭─〔 GROUP INFO 〕\n` +
-                `├─ Nama    : ${metadata.subject}\n` +
-                `├─ Member  : ${metadata.participants.length}\n` +
-                `├─ Admin   : ${admins}\n` +
-                `├─ ID      : ${metadata.id}\n` +
-                `╰─ Dibuat  : ${metadata.creation ? new Date(metadata.creation * 1000).toLocaleString("id-ID") : "Tidak tersedia"}`,
+              text: formatPanel("GROUP INFO", [
+                `Nama: ${metadata.subject}`,
+                `Member: ${metadata.participants.length}`,
+                `Admin: ${admins}`,
+                `ID: ${metadata.id}`,
+                `Dibuat: ${metadata.creation ? new Date(metadata.creation * 1000).toLocaleString("id-ID") : "Tidak tersedia"}`,
+              ]),
             },
             { quoted: msg },
           );
         } catch (error) {
           console.error("Error Group Info:", error);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "Gagal mengambil informasi grup." },
             { quoted: msg },
@@ -818,7 +1014,7 @@ module.exports = async (piyo, msg) => {
       case "tagadmin":
       case "tagadmins": {
         if (!from.endsWith("@g.us")) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             { text: "Fitur ini hanya bisa dipakai di dalam grup." },
             { quoted: msg },
@@ -831,14 +1027,14 @@ module.exports = async (piyo, msg) => {
             .filter((participant) => Boolean(participant.admin))
             .map((participant) => participant.id);
           if (adminJids.length === 0) {
-            return await piyo.sendMessage(
+            return await sendBotMessage(piyo,
               from,
               { text: "Tidak ada data admin yang tersedia." },
               { quoted: msg },
             );
           }
 
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             {
               text: `${q || "⌁ Admin grup, mohon bantu cek pesan ini."}\n\n${adminJids.map((jid) => `@${jid.split("@")[0]}`).join(" ")}`,
@@ -848,7 +1044,7 @@ module.exports = async (piyo, msg) => {
           );
         } catch (error) {
           console.error("Error Tag Admin:", error);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "Gagal mengambil daftar admin grup." },
             { quoted: msg },
@@ -862,7 +1058,7 @@ module.exports = async (piyo, msg) => {
       case "del": {
         const quotedKey = getQuotedKey(msg, from);
         if (!quotedKey) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: `Reply pesan yang ingin dihapus dengan *${prefix}delete*.`,
@@ -885,7 +1081,7 @@ module.exports = async (piyo, msg) => {
           );
 
           if (!isOwnerMessage(msg) && !senderParticipant?.admin) {
-            return await piyo.sendMessage(
+            return await sendBotMessage(piyo,
               from,
               { text: "⌁ Akses ditolak. Fitur delete hanya untuk admin grup." },
               { quoted: msg },
@@ -893,14 +1089,14 @@ module.exports = async (piyo, msg) => {
           }
 
           if (!botParticipant?.admin && !quotedKey.fromMe) {
-            return await piyo.sendMessage(
+            return await sendBotMessage(piyo,
               from,
               { text: "⌁ Bot harus menjadi admin untuk menghapus pesan ini." },
               { quoted: msg },
             );
           }
         } else if (!isOwnerMessage(msg)) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             { text: "⌁ Fitur delete di chat pribadi hanya untuk owner." },
             { quoted: msg },
@@ -908,10 +1104,10 @@ module.exports = async (piyo, msg) => {
         }
 
         try {
-          await piyo.sendMessage(from, { delete: quotedKey });
+          await sendBotMessage(piyo, from, { delete: quotedKey });
         } catch (error) {
           console.error("Error Delete Message:", error);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             {
               text: "Gagal menghapus pesan. Pastikan bot punya izin yang cukup.",
@@ -933,7 +1129,7 @@ module.exports = async (piyo, msg) => {
             : quotedMessage?.imageMessage;
 
         if (!imageMessage) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: `Kirim foto dengan caption *${prefix}vision* atau reply foto dengan command tersebut.`,
@@ -943,7 +1139,7 @@ module.exports = async (piyo, msg) => {
         }
 
         try {
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "⌁ AI sedang menganalisis gambar..." },
             { quoted: msg },
@@ -956,7 +1152,7 @@ module.exports = async (piyo, msg) => {
           );
           const chunks = response.match(/[\s\S]{1,4000}/g) || [];
           for (const [index, chunk] of chunks.entries()) {
-            await piyo.sendMessage(
+            await sendBotMessage(piyo,
               from,
               { text: chunk },
               index === 0 ? { quoted: msg } : {},
@@ -964,7 +1160,7 @@ module.exports = async (piyo, msg) => {
           }
         } catch (error) {
           console.error("Error Gemini Vision:", error);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "AI gagal menganalisis gambar. Coba foto lain." },
             { quoted: msg },
@@ -976,7 +1172,7 @@ module.exports = async (piyo, msg) => {
       case "antilink":
       case "welcome": {
         if (!from.endsWith("@g.us")) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             { text: "Fitur ini hanya bisa dipakai di dalam grup." },
             { quoted: msg },
@@ -989,7 +1185,7 @@ module.exports = async (piyo, msg) => {
             participant.phoneNumber === senderJid,
         );
         if (!isOwnerMessage(msg) && !senderParticipant?.admin) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             { text: "⌁ Akses ditolak. Pengaturan grup hanya untuk admin." },
             { quoted: msg },
@@ -1001,7 +1197,7 @@ module.exports = async (piyo, msg) => {
           const current = (await getGroupSettings(from))[setting]
             ? "ON"
             : "OFF";
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: `Status ${setting}: *${current}*\nGunakan *${prefix}${setting} on* atau *${prefix}${setting} off*.`,
@@ -1011,7 +1207,7 @@ module.exports = async (piyo, msg) => {
         }
         const enabled = requestedState === "on";
         await setGroupSetting(from, setting, enabled);
-        await piyo.sendMessage(
+        await sendBotMessage(piyo,
           from,
           {
             text: `⌁ ${setting} berhasil diubah ke *${enabled ? "ON" : "OFF"}*.`,
@@ -1026,7 +1222,7 @@ module.exports = async (piyo, msg) => {
       case "tagall":
         // 1. Validasi: Pastikan command ini cuma dipakai di dalam Grup
         if (!from.endsWith("@g.us")) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             { text: "! Woy, fitur ini cuma bisa dipakai di dalam Grup bro!" },
             { quoted: msg },
@@ -1046,7 +1242,7 @@ module.exports = async (piyo, msg) => {
           : "◆ *PENGUMUMAN UNTUK SELURUH WARGA GRUP!*";
 
         // 5. Kirim pesan dengan fitur 'mentions' bawaan Baileys
-        await piyo.sendMessage(from, {
+        await sendBotMessage(piyo, from, {
           text: teksPengumuman,
           mentions: memberJids,
         });
@@ -1055,20 +1251,20 @@ module.exports = async (piyo, msg) => {
       // --- PING PUBLIK ---
       case "ping": {
         const pingStartedAt = Date.now();
-        await piyo.sendMessage(
+        await sendBotMessage(piyo,
           from,
           { text: "⌁ Mengukur koneksi..." },
           { quoted: msg },
         );
         const latency = Date.now() - pingStartedAt;
-        await piyo.sendMessage(
+        await sendBotMessage(piyo,
           from,
           {
-            text:
-              `╭─〔 PING 〕\n` +
-              `├─ Latency : ${latency} ms\n` +
-              `├─ Status  : ONLINE\n` +
-              `╰─ Engine  : ADZBOTZS`,
+            text: formatPanel("PING", [
+              `Latency: ${latency} ms`,
+              "Status: ONLINE",
+              "Engine: Node.js / Baileys",
+            ]),
           },
           { quoted: msg },
         );
@@ -1079,7 +1275,7 @@ module.exports = async (piyo, msg) => {
       case "status":
       case "server":
         if (!isOwnerMessage(msg)) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             { text: "⌁ Akses ditolak. Status server hanya untuk owner." },
             { quoted: msg },
@@ -1097,21 +1293,21 @@ module.exports = async (piyo, msg) => {
         const freeRAM = Math.round(os.freemem() / 1024 / 1024);
         const usedRAM = totalRAM - freeRAM;
 
-        const serverInfo =
-          `╭─〔 SERVER STATUS // OWNER 〕\n` +
-          `├─ OS      : ${os.type()} ${os.release()}\n` +
-          `├─ RAM     : ${usedRAM} MB / ${totalRAM} MB\n` +
-          `├─ Uptime  : ${jam}j ${menit}m ${detik}d\n` +
-          `╰─ Engine  : Node.js ${process.version}`;
+        const serverInfo = formatPanel("SERVER STATUS // OWNER", [
+          `OS: ${os.type()} ${os.release()}`,
+          `RAM: ${usedRAM} MB / ${totalRAM} MB`,
+          `Uptime: ${jam}j ${menit}m ${detik}d`,
+          `Engine: Node.js ${process.version}`,
+        ]);
 
-        await piyo.sendMessage(from, { text: serverInfo }, { quoted: msg });
+        await sendBotMessage(piyo, from, { text: serverInfo }, { quoted: msg });
         break;
 
       // --- FITUR YOUTUBE PLAY (AUDIO) ---
       case "play":
       case "lagu":
         if (!q)
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: `Judul lagunya apa bro? Contoh: *${prefix}play Nadin Amizah Sorai*`,
@@ -1119,7 +1315,7 @@ module.exports = async (piyo, msg) => {
             { quoted: msg },
           );
 
-        await piyo.sendMessage(
+        await sendBotMessage(piyo,
           from,
           { text: "⌁ *Lagi mencari dan mengunduh lagunya, bentar bro...*" },
           { quoted: msg },
@@ -1131,7 +1327,7 @@ module.exports = async (piyo, msg) => {
           const video = search.videos?.[0] || search;
 
           if (!video || (!video.url && !video.videoId))
-            return await piyo.sendMessage(
+            return await sendBotMessage(piyo,
               from,
               { text: "× Lagu atau video YouTube tidak ditemukan." },
               { quoted: msg },
@@ -1143,14 +1339,14 @@ module.exports = async (piyo, msg) => {
 
           // 2. Kirim info lagu & Thumbnail
           const infoLagu =
-            `◆ *YOUTUBE MUSIC // ADZBOTZS*\n\n` +
+            `◆ *YOUTUBE MUSIC*\n\n` +
             `*· Judul:* ${videoTitle}\n` +
             `*· Durasi:* ${video.timestamp || "-"}\n` +
             `*· Views:* ${video.views ? Number(video.views).toLocaleString("id-ID") : "-"}\n\n` +
             `_Sedang memproses audio, tunggu sebentar..._`;
 
           if (video.thumbnail) {
-            await piyo.sendMessage(
+            await sendBotMessage(piyo,
               from,
               { image: { url: video.thumbnail }, caption: infoLagu },
               { quoted: msg },
@@ -1162,7 +1358,7 @@ module.exports = async (piyo, msg) => {
             .replace(/[\\/:*?"<>|]/g, "")
             .slice(0, 60);
 
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             {
               audio: audioBuffer,
@@ -1173,7 +1369,7 @@ module.exports = async (piyo, msg) => {
           );
         } catch (err) {
           console.error("Error YT Play:", err);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             {
               text: `× Gagal mengunduh lagu: ${err.message}\nCoba judul atau link YouTube lain.`,
@@ -1202,20 +1398,20 @@ module.exports = async (piyo, msg) => {
             const pXp = profileRows[0].xp;
             const pNext = pLevel * 100;
 
-            const teksRank =
-              `◆ *GLOBAL RANK & PROFILE*\n\n` +
-              `· *User:* @${targetNum}\n` +
-              `· *Level:* ${pLevel}\n` +
-              `· *XP:* ${pXp} / ${pNext}\n\n` +
-              `_Terus berinteraksi biar cepet naik level!_`;
+            const teksRank = formatPanel("GLOBAL RANK & PROFILE", [
+              `User: @${targetNum}`,
+              `Level: ${pLevel}`,
+              `XP: ${pXp} / ${pNext}`,
+              "Terus berinteraksi untuk naik level.",
+            ]);
 
-            await piyo.sendMessage(
+            await sendBotMessage(piyo,
               from,
               { text: teksRank, mentions: [target] },
               { quoted: msg },
             );
           } else {
-            await piyo.sendMessage(
+            await sendBotMessage(piyo,
               from,
               { text: "Belum ada data, coba kirim beberapa pesan dulu." },
               { quoted: msg },
@@ -1223,7 +1419,7 @@ module.exports = async (piyo, msg) => {
           }
         } catch (err) {
           console.error("Error Cek Rank:", err);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "× Gagal narik data profil dari database." },
             { quoted: msg },
@@ -1235,7 +1431,7 @@ module.exports = async (piyo, msg) => {
       case "balas":
       case "replymenfess":
         if (!q) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: `Tulis balasannya. Contoh: *${prefix}balas Halo juga, apa kabar?*`,
@@ -1246,7 +1442,7 @@ module.exports = async (piyo, msg) => {
 
         try {
           const sent = await sendSenderReply(piyo, from, q);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             {
               text: sent
@@ -1257,7 +1453,7 @@ module.exports = async (piyo, msg) => {
           );
         } catch (err) {
           console.error("Error Balas Menfess:", err);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "× Gagal mengirim balasan menfess." },
             { quoted: msg },
@@ -1269,7 +1465,7 @@ module.exports = async (piyo, msg) => {
       case "confess":
         // q berisi: "6285xxx Halo apa kabar"
         if (!q || !q.includes(" ")) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: `Format salah bro!\nContoh: *${prefix}menfess 628123456789 Halo, ini pesan rahasia buat lu*`,
@@ -1288,7 +1484,7 @@ module.exports = async (piyo, msg) => {
           targetMenfess = "62" + targetMenfess.slice(1);
         }
         if (!/^62\d{8,13}$/.test(targetMenfess) || !pesanMenfess) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: "Nomor atau pesan menfess tidak valid. Gunakan format 628xxxxxxxxxx lalu isi pesannya.",
@@ -1301,7 +1497,7 @@ module.exports = async (piyo, msg) => {
         try {
           const recipients = await piyo.onWhatsApp(jidTarget);
           if (!recipients?.some((recipient) => recipient.exists)) {
-            return await piyo.sendMessage(
+            return await sendBotMessage(piyo,
               from,
               { text: "× Nomor tujuan tidak terdaftar di WhatsApp." },
               { quoted: msg },
@@ -1309,14 +1505,18 @@ module.exports = async (piyo, msg) => {
           }
 
           // Teks yang akan diterima oleh target
-          const teksKirim = `◆ *MENFESS MASUK!*\n\nAda pesan rahasia dari seseorang buat lu nih:\n\n◆ _"${pesanMenfess}"_\n\n_Pesan ini dikirim secara anonim melalui sistem ADZBOTZS._`;
+          const teksKirim = formatPanel("MENFESS MASUK", [
+            "Pesan rahasia dari seseorang:",
+            `_“${pesanMenfess}”_`,
+            "Dikirim secara anonim.",
+          ]);
 
           // Bot ngirim pesan ke nomor target
-          await piyo.sendMessage(jidTarget, { text: teksKirim });
+          await sendBotMessage(piyo, jidTarget, { text: teksKirim });
           registerConversation(from, jidTarget);
 
           // Bot ngasih laporan sukses ke pengirim asli
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             {
               text: "✓ Menfess berhasil dikirim secara anonim.",
@@ -1325,7 +1525,7 @@ module.exports = async (piyo, msg) => {
           );
         } catch (err) {
           console.error("Error Menfess:", err);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             {
               text: "× Gagal ngirim menfess. Pastikan nomor tujuan bener dan terdaftar di WA.",
@@ -1341,7 +1541,7 @@ module.exports = async (piyo, msg) => {
       case "terminal":
         // 1. Validasi Keamanan: Pastikan yang ngirim adalah Owner
         if (!isOwnerMessage(msg)) {
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: "⌁ Akses ditolak. Terminal hanya untuk owner.",
@@ -1351,7 +1551,7 @@ module.exports = async (piyo, msg) => {
         }
 
         if (!q)
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: `Command Linux-nya mana bos?\nContoh: *${prefix}exec neofetch* atau *${prefix}exec ls -la*`,
@@ -1363,25 +1563,31 @@ module.exports = async (piyo, msg) => {
         exec(q, async (err, stdout, stderr) => {
           if (err) {
             // Kalau command error (misal typo atau command nggak ada)
-            return await piyo.sendMessage(
+            return await sendBotMessage(piyo,
               from,
-              { text: `× *ERROR TERMINAL:*\n\n${stderr || err.message}` },
+              {
+                text: formatPanel("ERROR TERMINAL", [
+                  stderr || err.message,
+                ]),
+              },
               { quoted: msg },
             );
           }
 
           // Kalau command sukses jalan, kirim outputnya ke WA
           if (stdout) {
-            await piyo.sendMessage(
+            await sendBotMessage(piyo,
               from,
-              { text: `◆ *OUTPUT SERVER LUBUNTU:*\n\n${stdout}` },
+              { text: formatPanel("OUTPUT SERVER", [stdout]) },
               { quoted: msg },
             );
           } else {
-            await piyo.sendMessage(
+            await sendBotMessage(piyo,
               from,
               {
-                text: `✓ Command '${q}' berhasil dieksekusi, tapi nggak ada output teks.`,
+                text: formatPanel("TERMINAL", [
+                  `Command '${q}' selesai tanpa output teks.`,
+                ]),
               },
               { quoted: msg },
             );
@@ -1399,7 +1605,7 @@ module.exports = async (piyo, msg) => {
               ?.imageMessage);
 
         if (!isImg)
-          return await piyo.sendMessage(
+          return await sendBotMessage(piyo,
             from,
             {
               text: `Kirim foto catatan lu dengan caption *${prefix}salin* atau reply fotonya!`,
@@ -1407,7 +1613,7 @@ module.exports = async (piyo, msg) => {
             { quoted: msg },
           );
 
-        await piyo.sendMessage(
+        await sendBotMessage(piyo,
           from,
           { text: "⌁ *Bentar, AI lagi ngebaca tulisan di fotonya...*" },
           { quoted: msg },
@@ -1435,13 +1641,13 @@ module.exports = async (piyo, msg) => {
           } = await Tesseract.recognize(bufferMedia, "eng+ind");
 
           if (text.trim().length > 0) {
-            await piyo.sendMessage(
+            await sendBotMessage(piyo,
               from,
-              { text: `◆ *HASIL SCAN TULISAN:*\n\n${text}` },
+              { text: formatPanel("HASIL SCAN TULISAN", [text]) },
               { quoted: msg },
             );
           } else {
-            await piyo.sendMessage(
+            await sendBotMessage(piyo,
               from,
               {
                 text: "× Nggak ada teks yang kebaca bro, fotonya buram kali.",
@@ -1451,13 +1657,290 @@ module.exports = async (piyo, msg) => {
           }
         } catch (err) {
           console.error("Error OCR:", err);
-          await piyo.sendMessage(
+          await sendBotMessage(piyo,
             from,
             { text: "× Mesin scannernya lagi error." },
             { quoted: msg },
           );
         }
         break;
+
+      case "cuaca": {
+        if (!q) {
+          return await sendBotMessage(piyo,
+            from,
+            { text: `Format: *${prefix}cuaca Jakarta*` },
+            { quoted: msg },
+          );
+        }
+        try {
+          const weather = await axios.get(
+            `https://wttr.in/${encodeURIComponent(q)}?format=j1`,
+            { timeout: 15000 },
+          );
+          const current = weather.data?.current_condition?.[0];
+          const area = weather.data?.nearest_area?.[0];
+          if (!current) throw new Error("Data cuaca kosong");
+          await sendBotMessage(piyo,
+            from,
+            {
+              text: formatPanel("CUACA", [
+                `Lokasi: ${area?.areaName?.[0]?.value || q}`,
+                `Kondisi: ${current.weatherDesc?.[0]?.value || "-"}`,
+                `Suhu: ${current.temp_C}°C`,
+                `Terasa: ${current.FeelsLikeC}°C`,
+                `Kelembapan: ${current.humidity}%`,
+                `Angin: ${current.windspeedKmph} km/jam`,
+              ]),
+            },
+            { quoted: msg },
+          );
+        } catch (error) {
+          console.error("Error Cuaca:", error.message);
+          await sendBotMessage(piyo,
+            from,
+            { text: "× Data cuaca tidak tersedia. Coba nama kota lain." },
+            { quoted: msg },
+          );
+        }
+        break;
+      }
+
+      case "calc":
+      case "kalkulator": {
+        if (!q || !/^[0-9+\-*/().%\s]+$/.test(q)) {
+          return await sendBotMessage(piyo,
+            from,
+            { text: `Format: *${prefix}calc 12 * 8 + 4*` },
+            { quoted: msg },
+          );
+        }
+        try {
+          const result = Function(`"use strict"; return (${q})`)();
+          if (!Number.isFinite(result)) throw new Error("Hasil tidak valid");
+          await sendBotMessage(piyo,
+            from,
+            { text: formatPanel("CALCULATOR", [`Rumus: ${q}`, `Hasil: ${result}`]) },
+            { quoted: msg },
+          );
+        } catch (error) {
+          await sendBotMessage(piyo,
+            from,
+            { text: "× Rumus tidak dapat dihitung." },
+            { quoted: msg },
+          );
+        }
+        break;
+      }
+
+      case "reminder": {
+        const reminderMatch = q.match(/^(\d+)\s+([\s\S]+)$/);
+        if (!reminderMatch) {
+          return await sendBotMessage(piyo,
+            from,
+            { text: `Format: *${prefix}reminder 10 minum air*` },
+            { quoted: msg },
+          );
+        }
+        const minutes = Number(reminderMatch[1]);
+        const reminderText = reminderMatch[2].trim();
+        if (minutes < 1 || minutes > 10080) {
+          return await sendBotMessage(piyo,
+            from,
+            { text: "× Durasi harus antara 1 menit dan 7 hari." },
+            { quoted: msg },
+          );
+        }
+        const oldReminder = reminderTimers.get(from);
+        if (oldReminder) clearTimeout(oldReminder);
+        const timer = setTimeout(async () => {
+          reminderTimers.delete(from);
+          await sendBotMessage(piyo, from, {
+            text: formatPanel("REMINDER", [reminderText]),
+          });
+        }, minutes * 60 * 1000);
+        reminderTimers.set(from, timer);
+        await sendBotMessage(piyo,
+          from,
+          { text: `✓ Reminder disetel untuk ${minutes} menit lagi.` },
+          { quoted: msg },
+        );
+        break;
+      }
+
+      case "quote": {
+        try {
+          const response = await axios.get(
+            "https://api.quotable.io/random",
+            { timeout: 10000 },
+          );
+          const quote = response.data;
+          await sendBotMessage(piyo,
+            from,
+            {
+              text: formatPanel("QUOTE", [`“${quote.content}”`, quote.author]),
+            },
+            { quoted: msg },
+          );
+        } catch (error) {
+          await sendBotMessage(piyo,
+            from,
+            { text: "× Quote sedang tidak tersedia." },
+            { quoted: msg },
+          );
+        }
+        break;
+      }
+
+      case "menfessinfo": {
+        const conversation = getConversation(from);
+        await sendBotMessage(piyo,
+          from,
+          {
+            text: conversation
+              ? formatPanel("MENFESS SESSION", [
+                  "Status: AKTIF",
+                  "Sesi berakhir dalam 24 jam sejak aktivitas terakhir.",
+                ])
+              : formatPanel("MENFESS SESSION", ["Tidak ada sesi aktif."]),
+          },
+          { quoted: msg },
+        );
+        break;
+      }
+
+      case "menfessstop": {
+        const ended = endConversation(from);
+        await sendBotMessage(piyo,
+          from,
+          {
+            text: ended
+              ? "✓ Sesi menfess diakhiri."
+              : "× Tidak ada sesi menfess aktif.",
+          },
+          { quoted: msg },
+        );
+        break;
+      }
+
+      case "rules": {
+        if (!from.endsWith("@g.us")) {
+          return await sendBotMessage(piyo,
+            from,
+            { text: "Fitur ini hanya bisa dipakai di dalam grup." },
+            { quoted: msg },
+          );
+        }
+        const currentRules = (await getGroupSettings(from)).rules;
+        if (!q) {
+          return await sendBotMessage(piyo,
+            from,
+            {
+              text: currentRules
+                ? `╭─〔 GROUP RULES 〕\n╰─ ${currentRules}`
+                : `Belum ada aturan grup. Admin dapat mengatur dengan *${prefix}rules [teks]*.`,
+            },
+            { quoted: msg },
+          );
+        }
+        const rulesMetadata = await piyo.groupMetadata(from);
+        const rulesSender = rulesMetadata.participants.find(
+          (participant) => participant.id === senderJid,
+        );
+        if (!isOwnerMessage(msg) && !rulesSender?.admin) {
+          return await sendBotMessage(piyo,
+            from,
+            { text: "× Fitur rules hanya untuk admin grup." },
+            { quoted: msg },
+          );
+        }
+        await db.query(
+          "INSERT INTO group_settings (group_id, rules) VALUES (?, ?) ON DUPLICATE KEY UPDATE rules = VALUES(rules)",
+          [from, q],
+        );
+        await sendBotMessage(piyo,
+          from,
+          { text: "✓ Aturan grup diperbarui." },
+          { quoted: msg },
+        );
+        break;
+      }
+
+      case "kick": {
+        if (!from.endsWith("@g.us")) {
+          return await sendBotMessage(piyo,
+            from,
+            { text: "Fitur ini hanya bisa dipakai di dalam grup." },
+            { quoted: msg },
+          );
+        }
+        const kickMetadata = await piyo.groupMetadata(from);
+        const kickSender = kickMetadata.participants.find(
+          (participant) => participant.id === senderJid,
+        );
+        if (!isOwnerMessage(msg) && !kickSender?.admin) {
+          return await sendBotMessage(piyo,
+            from,
+            { text: "× Fitur kick hanya untuk admin grup." },
+            { quoted: msg },
+          );
+        }
+        const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+        const target = mentioned[0] || q.replace(/\D/g, "");
+        const targetJid = target.includes("@")
+          ? target
+          : target
+            ? `${target}@s.whatsapp.net`
+            : "";
+        if (!targetJid) {
+          return await sendBotMessage(piyo,
+            from,
+            { text: `Format: mention user dengan *${prefix}kick @user*` },
+            { quoted: msg },
+          );
+        }
+        const botParticipant = kickMetadata.participants.find(
+          (participant) =>
+            participant.id === `${piyo.user.id.split(":")[0]}@s.whatsapp.net`,
+        );
+        if (!botParticipant?.admin) {
+          return await sendBotMessage(piyo,
+            from,
+            { text: "× Bot harus menjadi admin untuk mengeluarkan anggota." },
+            { quoted: msg },
+          );
+        }
+        await piyo.groupParticipantsUpdate(from, [targetJid], "remove");
+        await sendBotMessage(piyo,
+          from,
+          { text: "✓ Anggota dikeluarkan dari grup." },
+          { quoted: msg },
+        );
+        break;
+      }
+
+      case "cmdstats": {
+        if (!isOwnerMessage(msg)) {
+          return await sendBotMessage(piyo,
+            from,
+            { text: "× Akses ditolak. Statistik hanya untuk owner." },
+            { quoted: msg },
+          );
+        }
+        const stats = [...commandUsage.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 15)
+          .map(([name, count]) => `├─ ${name}: ${count}`)
+          .join("\n");
+        await sendBotMessage(piyo,
+          from,
+          {
+            text: `╭─〔 COMMAND STATS 〕\n${stats || "├─ Belum ada data"}\n╰─ Runtime: ${Math.floor(process.uptime())} detik`,
+          },
+          { quoted: msg },
+        );
+        break;
+      }
     }
   } catch (err) {
     console.error("Ada error di HandleMsg:", err);

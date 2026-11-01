@@ -23,7 +23,12 @@ async function enforceAntiLink(piyo, msg, from, body) {
   await piyo.sendMessage(
     from,
     {
-      text: "╭─〔 ANTI-LINK 〕\n├─ Link grup lain terdeteksi.\n╰─ Pesan akan dihapus dan pengirim dikeluarkan.",
+      text:
+        "┏━━━ ⟡ *ANTI-LINK*\n" +
+        "┃ ▸ Link grup lain terdeteksi.\n" +
+        "┃ ▸ Pesan akan dihapus.\n" +
+        "┃ ▸ Pengirim akan dikeluarkan.\n" +
+        "┗━━━━━━━━━━━━━━━━━━━━━━━━━━",
     },
     { quoted: msg },
   );
@@ -33,7 +38,11 @@ async function enforceAntiLink(piyo, msg, from, body) {
     await piyo.groupParticipantsUpdate(from, [sender], "remove");
   } else {
     await piyo.sendMessage(from, {
-      text: "Bot belum menjadi admin, jadi pesan tidak dapat dihapus atau pengirim tidak dapat dikeluarkan.",
+      text:
+        "┏━━━ ⟡ *ANTI-LINK*\n" +
+        "┃ ▸ Bot belum menjadi admin.\n" +
+        "┃ ▸ Pesan dan anggota tidak dapat diproses.\n" +
+        "┗━━━━━━━━━━━━━━━━━━━━━━━━━━",
     });
   }
 

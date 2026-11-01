@@ -144,9 +144,10 @@ async function startBot() {
       const names = mentions.map((jid) => `@${jid.split("@")[0]}`).join(", ");
       await piyo.sendMessage(update.id, {
         text:
-          `╭─〔 WELCOME 〕\n` +
-          `├─ Selamat datang ${names}\n` +
-          `╰─ di *${metadata.subject}*`,
+          `┏━━━ ⟡ *WELCOME NODE*\n` +
+          `┃ ▸ Selamat datang ${names}\n` +
+          `┃ ▸ Grup: *${metadata.subject}*\n` +
+          `┗━━━━━━━━━━━━━━━━━━━━━━━━━━`,
         mentions,
       });
     } catch (error) {

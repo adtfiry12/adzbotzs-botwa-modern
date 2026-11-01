@@ -48,9 +48,17 @@ async function initDatabase() {
       CREATE TABLE IF NOT EXISTS group_settings (
         group_id VARCHAR(191) PRIMARY KEY,
         antilink TINYINT(1) NOT NULL DEFAULT 1,
-        welcome TINYINT(1) NOT NULL DEFAULT 0
+        welcome TINYINT(1) NOT NULL DEFAULT 0,
+        rules TEXT NULL
       )
     `);
+    await db.query(
+      "ALTER TABLE group_settings ADD COLUMN rules TEXT NULL",
+    ).catch((error) => {
+      if (!/duplicate column|already exists/i.test(error.message)) {
+        throw error;
+      }
+    });
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS soal_kuis (

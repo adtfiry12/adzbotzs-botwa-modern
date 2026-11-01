@@ -10,10 +10,10 @@ async function getGroupSettings(groupId) {
       [groupId],
     );
     const [rows] = await db.query(
-      "SELECT antilink, welcome FROM group_settings WHERE group_id = ?",
+      "SELECT antilink, welcome, rules FROM group_settings WHERE group_id = ?",
       [groupId],
     );
-    return rows[0] || { antilink: 1, welcome: 0 };
+    return rows[0] || { antilink: 1, welcome: 0, rules: null };
   } catch (error) {
     console.error("Error getGroupSettings:", error.message);
     return { antilink: 1, welcome: 0 };
