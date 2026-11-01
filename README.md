@@ -4,26 +4,27 @@
   <img src="./assets/menu-logo.png" alt="ADZBOTZS" width="720">
 </p>
 
-Bot WhatsApp berbasis Node.js, Baileys, MySQL-compatible database, Gemini, dan
-FFmpeg. Bisa dijalankan dari terminal atau hosting yang mendukung proses Node.js
-yang berjalan terus.
+Bot WhatsApp berbasis Node.js, Baileys, MySQL, Gemini, dan FFmpeg. Bisa
+dijalankan dari terminal atau layanan hosting yang mendukung Node.js maupun
+Docker.
 
 ## Fitur
 
 - Menu, owner, ping, status, AFK, jokes, dan level/XP.
-- Stiker, konversi stiker, TTS, OCR, dan konversi media.
-- Gemini text dan vision.
-- Pencarian audio YouTube serta downloader TikTok.
-- Menfess dengan balasan, kuis, anti-link, welcome, hidetag, tag admin, dan delete.
+- Stiker, TTS, OCR, konversi media, dan downloader.
+- AI Gemini untuk teks dan gambar.
+- Kuis, cuaca, kalkulator, quote, dan reminder.
+- Menfess dengan balasan dua arah.
+- Fitur grup seperti anti-link, welcome, hidetag, rules, kick, dan tag admin.
 
 ## Kebutuhan
 
 - Node.js 20 atau lebih baru.
-- FFmpeg untuk stiker, TTS, dan konversi media.
+- FFmpeg untuk fitur media.
 - Database yang kompatibel dengan MySQL.
-- API key Gemini jika fitur AI dipakai.
+- API key Gemini jika ingin memakai fitur AI.
 
-## Menjalankan
+## Instalasi
 
 ```bash
 git clone https://github.com/adtfiry12/adzbotzs-reborn.git
@@ -33,37 +34,39 @@ cp .env.example .env
 npm start
 ```
 
-Jika `BOT_NUMBER` kosong, QR tampil di terminal. Jika diisi dengan nomor
-internasional tanpa tanda `+`, kode pairing tampil di log.
-
-## Hosting dengan Docker
-
-Repository ini memakai `Dockerfile` sebagai satu-satunya jalur build. Saat image
-dibuat, Docker otomatis memasang FFmpeg, yt-dlp, sertifikat HTTPS, dan semua
-package Node dari `package-lock.json`.
-
-1. Hubungkan repository ke layanan hosting yang mendukung Dockerfile.
-2. Set environment variable dari dashboard hosting. Jangan commit `.env`.
-3. Isi `BOT_NUMBER` agar kode pairing bisa diambil dari log deployment.
-4. Gunakan database eksternal yang bisa diakses dari internet. `DB_HOST=mysql`
-   hanya berlaku jika aplikasi dan MySQL berada di network Docker yang sama.
-5. Simpan folder `session-baileys` pada persistent storage jika platform
-   menghapus filesystem saat restart.
-6. Arahkan health check ke `/health`. Port memakai `PORT` dari hosting.
-
-Build dan jalankan sendiri:
+`npm install` memasang semua module dari `package.json`. Untuk deployment
+production, gunakan:
 
 ```bash
-docker build -t adzbotzs .
-docker run --env-file .env -p 8080:8080 \
-  -v adzbotzs-session:/app/session-baileys adzbotzs
+npm ci --omit=dev
 ```
 
-Pada Back4app, cukup hubungkan repository dan pastikan build mode membaca
-`Dockerfile` di root. Tidak perlu menjalankan `npm install` manual karena proses
-build sudah menjalankan `npm ci`.
+Jika `BOT_NUMBER` kosong, scan QR yang tampil di terminal. Jika diisi nomor
+internasional tanpa tanda `+`, gunakan kode pairing dari log.
 
-Contoh variabel database lokal:
+## Konfigurasi
+
+Salin `.env.example` menjadi `.env`, lalu isi nilai yang diperlukan. Jangan
+unggah `.env` atau API key ke repository.
+
+| Variabel | Keterangan |
+| --- | --- |
+| `BOT_NAME` | Nama bot. |
+| `OWNER_NAME` | Nama owner. |
+| `OWNER_NUMBER` | Nomor owner dengan kode negara. |
+| `BOT_NUMBER` | Nomor pairing; kosongkan untuk QR. |
+| `PORT` | Port web server. |
+| `GEMINI_API_KEY` | API key Gemini. |
+| `GEMINI_MODEL` | Model Gemini, default `gemini-3.5-flash-lite`. |
+| `DB_HOST` | Host database. |
+| `DB_PORT` | Port database. |
+| `DB_USER` | User database. |
+| `DB_PASSWORD` | Password database. |
+| `DB_NAME` | Nama database. |
+| `DB_SSL` | `true` atau `false`. |
+| `MENU_LOGO_PATH` | Path logo menu opsional. |
+
+Database lokal:
 
 ```env
 DB_HOST=127.0.0.1
@@ -74,37 +77,34 @@ DB_NAME=adzbotzs
 DB_SSL=false
 ```
 
-Untuk database cloud, ganti host, port, user, password, dan nama database sesuai
-provider. Gunakan `DB_SSL=true` jika provider mewajibkan TLS. Variabel
-`DB_USERNAME` dan `DB_DATABASE` juga masih diterima untuk kompatibilitas konfigurasi
-lama.
+Tabel bot dibuat otomatis saat database berhasil terhubung. Untuk database
+cloud, gunakan host, port, user, password, dan SSL sesuai provider.
 
-## Environment variable
+## Hosting
 
-| Variabel | Keterangan |
-| --- | --- |
-| `BOT_NAME` | Nama bot. |
-| `OWNER_NAME` | Nama owner. |
-| `OWNER_NUMBER` | Nomor owner dengan kode negara. |
-| `BOT_NUMBER` | Nomor untuk pairing; kosongkan untuk QR. |
-| `PORT` | Port web server. |
-| `GEMINI_API_KEY` | API key Gemini. |
-| `GEMINI_MODEL` | Model Gemini, default `gemini-2.5-flash`. |
-| `DB_HOST` | Host database. |
-| `DB_PORT` | Port database. |
-| `DB_USER` | User database. |
-| `DB_PASSWORD` | Password database. |
-| `DB_NAME` | Nama database. |
-| `DB_SSL` | `true` atau `false`. |
-| `MENU_LOGO_PATH` | Path gambar menu opsional. |
+### Node.js
 
-Tabel `users`, `group_settings`, dan `soal_kuis` dibuat otomatis saat koneksi
-database berhasil. Kolom `rules` pada `group_settings` ditambahkan otomatis pada
-database lama.
+1. Hubungkan repository ke layanan hosting yang mendukung aplikasi Node.js.
+2. Set environment variable dari dashboard hosting.
+3. Jalankan build command `npm ci --omit=dev`.
+4. Jalankan start command `npm start`.
+5. Gunakan persistent storage untuk folder `session-baileys`.
+6. Arahkan health check ke `/health` jika tersedia.
+
+### Docker
+
+```bash
+docker build -t adzbotzs .
+docker run --env-file .env -p 8080:8080 \
+  -v adzbotzs-session:/app/session-baileys adzbotzs
+```
+
+`Dockerfile` memasang dependency Node, FFmpeg, Python, dan yt-dlp saat proses
+build. Port aplikasi mengikuti nilai `PORT`.
 
 ## Command
 
-Prefix umum yang didukung: `.`, `!`, dan `#`.
+Prefix yang didukung: `.`, `!`, dan `#`.
 
 | Kelompok | Command |
 | --- | --- |
@@ -119,20 +119,17 @@ Prefix umum yang didukung: `.`, `!`, dan `#`.
 | Utility | `calc`, `cuaca`, `quote`, `reminder` |
 | Owner | `status`, `exec`, `cmdstats` |
 
-Gunakan `.menu` untuk info singkat, lalu buka command index langsung dengan
-`.tools`, `.group`, `.utility`, `.menfess`, atau `.panel` untuk owner.
+Gunakan `.menu` untuk melihat akses cepat. Gunakan `.tools`, `.group`,
+`.utility`, `.menfess`, atau `.panel` untuk membuka bagian tertentu.
 
 ## Troubleshooting
 
-- `getaddrinfo EAI_AGAIN mysql`: host `mysql` tidak bisa ditemukan. Gunakan
-  host database sebenarnya, atau jalankan aplikasi dan MySQL pada network Docker
-  yang sama.
-- Pairing tidak muncul: pastikan `BOT_NUMBER` hanya berisi angka dan lihat log
-  proses utama.
-- Login hilang setelah restart: gunakan persistent storage untuk
+- `getaddrinfo EAI_AGAIN mysql`: ganti `DB_HOST` dengan host database yang
+  benar. Host `mysql` hanya berlaku jika MySQL berada di network yang sama.
+- Pairing tidak muncul: pastikan `BOT_NUMBER` hanya berisi angka.
+- Login hilang setelah restart: aktifkan persistent storage untuk
   `session-baileys`.
-- Fitur audio gagal: rebuild image agar instalasi FFmpeg dan yt-dlp dijalankan
-  kembali.
+- Fitur media gagal: pastikan FFmpeg tersedia atau rebuild image Docker.
 
 ## Lisensi
 
