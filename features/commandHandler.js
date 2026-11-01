@@ -1,6 +1,20 @@
 const axios = require("axios");
 const fs = require("fs");
+const os = require("os");
+const path = require("path");
 const ffmpeg = require("fluent-ffmpeg");
+
+// Setup path FFmpeg otomatis (support @ffmpeg-installer di server hosting)
+try {
+  const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
+  if (ffmpegInstaller?.path) {
+    ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+    const ffmpegDir = path.dirname(ffmpegInstaller.path);
+    if (!process.env.PATH.includes(ffmpegDir)) {
+      process.env.PATH = `${ffmpegDir}:${process.env.PATH}`;
+    }
+  }
+} catch (_) {}
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 const activeGames = {};
 const config = require("../config");
@@ -16,8 +30,6 @@ const {
   relayTargetReply,
   sendSenderReply,
 } = require("./menfess");
-const os = require("os");
-const path = require("path");
 const { exec } = require("child_process");
 const Tesseract = require("tesseract.js");
 const yts = require("yt-search");
@@ -116,6 +128,7 @@ module.exports = async (piyo, msg) => {
 
     // Ekstrak tipe pesan dan teksnya
     if (!msg?.message || !from) return;
+    await db.ready;
 
     const { type, body } = extractMessage(msg);
 
@@ -146,9 +159,9 @@ module.exports = async (piyo, msg) => {
           from,
           {
             text:
-              `🎉 *BENAR SEKALI!*\n\n` +
-              `Jawaban: *${game.jawaban}*\n` +
-              `Ronde selesai. Kalau mau lanjut, ketik *.kuis* lagi.`,
+              `╭─〔 JAWABAN BENAR 〕\n` +
+              `├─ Jawaban: *${game.jawaban}*\n` +
+              `╰─ Ketik *.kuis* untuk ronde berikutnya.`,
           },
           { quoted: msg },
         );
@@ -196,7 +209,7 @@ module.exports = async (piyo, msg) => {
 
           // Kirim notifikasi kalau naik level (opsional, bisa lu komen kalau dirasa spam)
           await piyo.sendMessage(from, {
-            text: `🎉 *LEVEL UP!*\nSelamat @${senderNum}, lu berhasil naik ke Level ${currentLevel}! 🚀`,
+            text: `╭─〔 LEVEL UP 〕\n├─ Selamat @${senderNum}\n╰─ Level ${currentLevel} aktif.`,
             mentions: [sender],
           });
         }
@@ -344,7 +357,7 @@ module.exports = async (piyo, msg) => {
         if (isImage || isQuotedImage) {
           await piyo.sendMessage(
             from,
-            { text: "⏳ *Bentar, lagi di-render jadi stiker...*" },
+            { text: "⌁ *Bentar, lagi di-render jadi stiker...*" },
             { quoted: msg },
           );
 
@@ -377,7 +390,7 @@ module.exports = async (piyo, msg) => {
                 console.error("FFmpeg Error:", err);
                 piyo.sendMessage(
                   from,
-                  { text: "❌ Gagal bikin stiker bro." },
+                  { text: "× Gagal bikin stiker bro." },
                   { quoted: msg },
                 );
                 fs.unlinkSync(tempFile); // Bersihin sampah
@@ -412,7 +425,7 @@ module.exports = async (piyo, msg) => {
             console.error("Download Error:", err);
             await piyo.sendMessage(
               from,
-              { text: "❌ Gagal narik gambar dari server WA." },
+              { text: "× Gagal narik gambar dari server WA." },
               { quoted: msg },
             );
           }
@@ -453,7 +466,7 @@ module.exports = async (piyo, msg) => {
           console.error("Error TTS:", err);
           await piyo.sendMessage(
             from,
-            { text: `❌ Gagal memproses suara: ${err.message}` },
+            { text: `× Gagal memproses suara: ${err.message}` },
             { quoted: msg },
           );
         }
@@ -569,7 +582,7 @@ module.exports = async (piyo, msg) => {
         break;
       }
 
-      // --- FITUR TIKTOK DOWNLOADER (NO WATERMARK) ---
+      // --- FITUR TIKTOK DOWNLOADER ---
       case "tiktok":
       case "tt":
         if (!q)
@@ -584,7 +597,7 @@ module.exports = async (piyo, msg) => {
         // Kasih respon loading biar user tahu botnya lagi kerja
         await piyo.sendMessage(
           from,
-          { text: "⏳ *Sedang narik video dari TikTok, tunggu bentar...*" },
+          { text: "⌁ *Sedang narik video dari TikTok, tunggu bentar...*" },
           { quoted: msg },
         );
 
@@ -605,7 +618,7 @@ module.exports = async (piyo, msg) => {
               from,
               {
                 video: { url: videoUrl },
-                caption: `*👤 Kreator:* ${author}\n*📝 Judul:* ${title}\n\n*🚀 Downloaded via ADZBOTZS*`,
+                caption: `╭─〔 TIKTOK 〕\n├─ Kreator: ${author}\n├─ Judul: ${title}\n╰─ ADZBOTZS`,
               },
               { quoted: msg },
             );
@@ -613,7 +626,7 @@ module.exports = async (piyo, msg) => {
             await piyo.sendMessage(
               from,
               {
-                text: "❌ Gagal ngambil video. Pastikan linknya bener dan videonya nggak di-private.",
+                text: "× Gagal ngambil video. Pastikan linknya bener dan videonya nggak di-private.",
               },
               { quoted: msg },
             );
@@ -622,7 +635,7 @@ module.exports = async (piyo, msg) => {
           console.error("Error TikTok Downloader:", err);
           await piyo.sendMessage(
             from,
-            { text: "❌ Server API lagi down atau link nggak valid." },
+            { text: "× Server API lagi down atau link nggak valid." },
             { quoted: msg },
           );
         }
@@ -639,7 +652,7 @@ module.exports = async (piyo, msg) => {
             from,
             {
               text:
-                "⚠️ Masih ada soal yang belum dijawab di chat ini.\n" +
+                "! Masih ada soal yang belum dijawab di chat ini.\n" +
                 "Jawab dulu soal sebelumnya atau tunggu sampai waktunya habis.",
             },
             { quoted: msg },
@@ -657,7 +670,7 @@ module.exports = async (piyo, msg) => {
             return await piyo.sendMessage(
               from,
               {
-                text: "⚠️ Waduh, bank soal di database MySQL masih kosong bro!",
+                text: "! Waduh, bank soal di database MySQL masih kosong bro!",
               },
               { quoted: msg },
             );
@@ -667,10 +680,10 @@ module.exports = async (piyo, msg) => {
 
           // Kirim soal ke WA
           const teksKuis =
-            `🎮 *KUIS ADZBOTZS // RONDE BARU*\n\n` +
-            `❓ *Soal:* ${randomSoal.soal}\n` +
-            `⏳ *Waktu:* 60 Detik\n\n` +
-            `_Langsung ketik jawabannya di chat ini!_\n` +
+            `╭─〔 KUIS // RONDE BARU 〕\n` +
+            `├─ Soal: ${randomSoal.soal}\n` +
+            `├─ Waktu: 60 detik\n` +
+            `╰─ Jawab langsung di chat.\n\n` +
             `_Setelah selesai, ketik *.kuis* untuk ronde berikutnya._`;
 
           await piyo.sendMessage(from, { text: teksKuis }, { quoted: msg });
@@ -683,9 +696,9 @@ module.exports = async (piyo, msg) => {
               if (activeGames[from]) {
                 await piyo.sendMessage(from, {
                   text:
-                    `⏰ *WAKTU HABIS!*\n\n` +
-                    `Jawabannya adalah: *${randomSoal.jawaban}*\n` +
-                    `Kalau mau coba lagi, ketik *.kuis*.`,
+                    `╭─〔 WAKTU HABIS 〕\n` +
+                    `├─ Jawaban: *${randomSoal.jawaban}*\n` +
+                    `╰─ Ketik *.kuis* untuk ronde baru.`,
                 });
                 delete activeGames[from]; // Bersihkan memori
               }
@@ -695,7 +708,7 @@ module.exports = async (piyo, msg) => {
           console.error("Error DB Kuis:", error);
           await piyo.sendMessage(
             from,
-            { text: "❌ Gagal narik soal! Cek koneksi MySQL lu di terminal." },
+            { text: "× Gagal narik soal! Cek koneksi MySQL lu di terminal." },
             { quoted: msg },
           );
         }
@@ -717,7 +730,7 @@ module.exports = async (piyo, msg) => {
         // Kasih respon indikator loading
         await piyo.sendMessage(
           from,
-          { text: "⏳ *Bentar bro, AI lagi mikir...*" },
+          { text: "⌁ *Bentar bro, AI lagi mikir...*" },
           { quoted: msg },
         );
 
@@ -735,7 +748,7 @@ module.exports = async (piyo, msg) => {
           await piyo.sendMessage(
             from,
             {
-              text: "❌ Waduh, otak AI-nya lagi nge-hang bro. Coba lagi nanti.",
+              text: "× Waduh, otak AI-nya lagi nge-hang bro. Coba lagi nanti.",
             },
             { quoted: msg },
           );
@@ -1015,7 +1028,7 @@ module.exports = async (piyo, msg) => {
         if (!from.endsWith("@g.us")) {
           return await piyo.sendMessage(
             from,
-            { text: "⚠️ Woy, fitur ini cuma bisa dipakai di dalam Grup bro!" },
+            { text: "! Woy, fitur ini cuma bisa dipakai di dalam Grup bro!" },
             { quoted: msg },
           );
         }
@@ -1030,7 +1043,7 @@ module.exports = async (piyo, msg) => {
         // 4. Siapkan teks pengumuman
         const teksPengumuman = q
           ? q
-          : "📢 *PENGUMUMAN UNTUK SELURUH WARGA GRUP!*";
+          : "◆ *PENGUMUMAN UNTUK SELURUH WARGA GRUP!*";
 
         // 5. Kirim pesan dengan fitur 'mentions' bawaan Baileys
         await piyo.sendMessage(from, {
@@ -1108,7 +1121,7 @@ module.exports = async (piyo, msg) => {
 
         await piyo.sendMessage(
           from,
-          { text: "⏳ *Lagi mencari dan mengunduh lagunya, bentar bro...*" },
+          { text: "⌁ *Lagi mencari dan mengunduh lagunya, bentar bro...*" },
           { quoted: msg },
         );
 
@@ -1120,7 +1133,7 @@ module.exports = async (piyo, msg) => {
           if (!video || (!video.url && !video.videoId))
             return await piyo.sendMessage(
               from,
-              { text: "❌ Lagu atau video YouTube tidak ditemukan." },
+              { text: "× Lagu atau video YouTube tidak ditemukan." },
               { quoted: msg },
             );
 
@@ -1130,10 +1143,10 @@ module.exports = async (piyo, msg) => {
 
           // 2. Kirim info lagu & Thumbnail
           const infoLagu =
-            `🎵 *YOUTUBE MUSIC // ADZBOTZS*\n\n` +
-            `*📌 Judul:* ${videoTitle}\n` +
-            `*⏱️ Durasi:* ${video.timestamp || "-"}\n` +
-            `*👁️ Views:* ${video.views ? Number(video.views).toLocaleString("id-ID") : "-"}\n\n` +
+            `◆ *YOUTUBE MUSIC // ADZBOTZS*\n\n` +
+            `*· Judul:* ${videoTitle}\n` +
+            `*· Durasi:* ${video.timestamp || "-"}\n` +
+            `*· Views:* ${video.views ? Number(video.views).toLocaleString("id-ID") : "-"}\n\n` +
             `_Sedang memproses audio, tunggu sebentar..._`;
 
           if (video.thumbnail) {
@@ -1163,7 +1176,7 @@ module.exports = async (piyo, msg) => {
           await piyo.sendMessage(
             from,
             {
-              text: `❌ Gagal mengunduh lagu: ${err.message}\nCoba judul atau link YouTube lain.`,
+              text: `× Gagal mengunduh lagu: ${err.message}\nCoba judul atau link YouTube lain.`,
             },
             { quoted: msg },
           );
@@ -1190,10 +1203,10 @@ module.exports = async (piyo, msg) => {
             const pNext = pLevel * 100;
 
             const teksRank =
-              `📊 *GLOBAL RANK & PROFILE*\n\n` +
-              `👤 *User:* @${targetNum}\n` +
-              `🎖️ *Level:* ${pLevel}\n` +
-              `✨ *XP:* ${pXp} / ${pNext}\n\n` +
+              `◆ *GLOBAL RANK & PROFILE*\n\n` +
+              `· *User:* @${targetNum}\n` +
+              `· *Level:* ${pLevel}\n` +
+              `· *XP:* ${pXp} / ${pNext}\n\n` +
               `_Terus berinteraksi biar cepet naik level!_`;
 
             await piyo.sendMessage(
@@ -1212,7 +1225,7 @@ module.exports = async (piyo, msg) => {
           console.error("Error Cek Rank:", err);
           await piyo.sendMessage(
             from,
-            { text: "❌ Gagal narik data profil dari database." },
+            { text: "× Gagal narik data profil dari database." },
             { quoted: msg },
           );
         }
@@ -1237,8 +1250,8 @@ module.exports = async (piyo, msg) => {
             from,
             {
               text: sent
-                ? "✅ Balasan anonim berhasil dikirim ke target."
-                : "⚠️ Tidak ada sesi menfess aktif. Kirim menfess baru terlebih dahulu.",
+                ? "✓ Balasan anonim berhasil dikirim ke target."
+                : "! Tidak ada sesi menfess aktif. Kirim menfess baru terlebih dahulu.",
             },
             { quoted: msg },
           );
@@ -1246,7 +1259,7 @@ module.exports = async (piyo, msg) => {
           console.error("Error Balas Menfess:", err);
           await piyo.sendMessage(
             from,
-            { text: "❌ Gagal mengirim balasan menfess." },
+            { text: "× Gagal mengirim balasan menfess." },
             { quoted: msg },
           );
         }
@@ -1290,13 +1303,13 @@ module.exports = async (piyo, msg) => {
           if (!recipients?.some((recipient) => recipient.exists)) {
             return await piyo.sendMessage(
               from,
-              { text: "❌ Nomor tujuan tidak terdaftar di WhatsApp." },
+              { text: "× Nomor tujuan tidak terdaftar di WhatsApp." },
               { quoted: msg },
             );
           }
 
           // Teks yang akan diterima oleh target
-          const teksKirim = `💌 *MENFESS MASUK!*\n\nAda pesan rahasia dari seseorang buat lu nih:\n\n💬 _"${pesanMenfess}"_\n\n_Pesan ini dikirim secara anonim melalui sistem ADZBOTZS._`;
+          const teksKirim = `◆ *MENFESS MASUK!*\n\nAda pesan rahasia dari seseorang buat lu nih:\n\n◆ _"${pesanMenfess}"_\n\n_Pesan ini dikirim secara anonim melalui sistem ADZBOTZS._`;
 
           // Bot ngirim pesan ke nomor target
           await piyo.sendMessage(jidTarget, { text: teksKirim });
@@ -1306,7 +1319,7 @@ module.exports = async (piyo, msg) => {
           await piyo.sendMessage(
             from,
             {
-              text: "✅ Pesan menfess lu udah berhasil dikirim ke target secara rahasia!",
+              text: "✓ Menfess berhasil dikirim secara anonim.",
             },
             { quoted: msg },
           );
@@ -1315,7 +1328,7 @@ module.exports = async (piyo, msg) => {
           await piyo.sendMessage(
             from,
             {
-              text: "❌ Gagal ngirim menfess. Pastikan nomor tujuan bener dan terdaftar di WA.",
+              text: "× Gagal ngirim menfess. Pastikan nomor tujuan bener dan terdaftar di WA.",
             },
             { quoted: msg },
           );
@@ -1352,7 +1365,7 @@ module.exports = async (piyo, msg) => {
             // Kalau command error (misal typo atau command nggak ada)
             return await piyo.sendMessage(
               from,
-              { text: `❌ *ERROR TERMINAL:*\n\n${stderr || err.message}` },
+              { text: `× *ERROR TERMINAL:*\n\n${stderr || err.message}` },
               { quoted: msg },
             );
           }
@@ -1361,14 +1374,14 @@ module.exports = async (piyo, msg) => {
           if (stdout) {
             await piyo.sendMessage(
               from,
-              { text: `💻 *OUTPUT SERVER LUBUNTU:*\n\n${stdout}` },
+              { text: `◆ *OUTPUT SERVER LUBUNTU:*\n\n${stdout}` },
               { quoted: msg },
             );
           } else {
             await piyo.sendMessage(
               from,
               {
-                text: `✅ Command '${q}' berhasil dieksekusi, tapi nggak ada output teks.`,
+                text: `✓ Command '${q}' berhasil dieksekusi, tapi nggak ada output teks.`,
               },
               { quoted: msg },
             );
@@ -1396,7 +1409,7 @@ module.exports = async (piyo, msg) => {
 
         await piyo.sendMessage(
           from,
-          { text: "⏳ *Bentar, AI lagi ngebaca tulisan di fotonya...*" },
+          { text: "⌁ *Bentar, AI lagi ngebaca tulisan di fotonya...*" },
           { quoted: msg },
         );
 
@@ -1424,14 +1437,14 @@ module.exports = async (piyo, msg) => {
           if (text.trim().length > 0) {
             await piyo.sendMessage(
               from,
-              { text: `📝 *HASIL SCAN TULISAN:*\n\n${text}` },
+              { text: `◆ *HASIL SCAN TULISAN:*\n\n${text}` },
               { quoted: msg },
             );
           } else {
             await piyo.sendMessage(
               from,
               {
-                text: "❌ Nggak ada teks yang kebaca bro, fotonya buram kali.",
+                text: "× Nggak ada teks yang kebaca bro, fotonya buram kali.",
               },
               { quoted: msg },
             );
@@ -1440,7 +1453,7 @@ module.exports = async (piyo, msg) => {
           console.error("Error OCR:", err);
           await piyo.sendMessage(
             from,
-            { text: "❌ Mesin scannernya lagi error." },
+            { text: "× Mesin scannernya lagi error." },
             { quoted: msg },
           );
         }

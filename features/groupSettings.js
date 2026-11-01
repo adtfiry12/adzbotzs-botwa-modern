@@ -1,7 +1,10 @@
 const db = require("../db");
 
+const databaseReady = db.ready;
+
 async function getGroupSettings(groupId) {
   try {
+    await databaseReady;
     await db.query(
       "INSERT IGNORE INTO group_settings (group_id) VALUES (?)",
       [groupId],
@@ -21,6 +24,7 @@ async function setGroupSetting(groupId, setting, enabled) {
   if (!["antilink", "welcome"].includes(setting)) {
     throw new Error(`Setting grup tidak dikenal: ${setting}`);
   }
+  await databaseReady;
   await db.query(
     `INSERT INTO group_settings (group_id, ${setting}) VALUES (?, ?)
      ON DUPLICATE KEY UPDATE ${setting} = VALUES(${setting})`,

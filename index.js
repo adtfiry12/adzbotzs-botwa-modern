@@ -8,6 +8,19 @@ const figlet = require("figlet");
 const chalk = require("chalk");
 const qrcode = require("qrcode-terminal");
 const express = require("express");
+const path = require("path");
+
+// Deteksi otomatis binary FFmpeg jika menggunakan @ffmpeg-installer di cloud
+try {
+  const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
+  if (ffmpegInstaller?.path) {
+    const ffmpegDir = path.dirname(ffmpegInstaller.path);
+    if (!process.env.PATH.includes(ffmpegDir)) {
+      process.env.PATH = `${ffmpegDir}:${process.env.PATH}`;
+    }
+  }
+} catch (_) {}
+
 const HandleMsg = require("./HandleMsg");
 const config = require("./config");
 const { getGroupSettings } = require("./features/groupSettings");
@@ -57,7 +70,7 @@ async function startBot() {
 
   const { state, saveCreds } = await useMultiFileAuthState("./session-baileys");
 
-  const usePairingCode = Boolean(process.env.BOT_NUMBER);
+  const usePairingCode = Boolean(config.botNumber);
 
   const piyo = makeWASocket({
     auth: state,
@@ -68,10 +81,8 @@ async function startBot() {
 
   piyo.ev.on("creds.update", saveCreds);
 
-  // --- LOGIKA AUTENTIKASI DUAL MODE ---
-  // Mode 1 (Deploy / Cloud / Back4app): Menggunakan BOT_NUMBER untuk meminta Pairing Code
-  // Mode 2 (Local Terminal): Menggunakan QR Code di terminal jika BOT_NUMBER tidak diisi
-  if (!piyo.authState.creds.registered) {
+  // Pairing code is used when BOT_NUMBER is set; otherwise show a terminal QR.
+  if (!state.creds.registered) {
     if (usePairingCode) {
       setTimeout(async () => {
         const rawNumber = process.env.BOT_NUMBER || "";
@@ -80,7 +91,7 @@ async function startBot() {
         if (!cleanNumber) {
           console.log(
             chalk.bgRed.white(
-              " ⚠️ ERROR: Variabel BOT_NUMBER tidak valid di file .env atau env Back4app! ⚠️ ",
+              "BOT_NUMBER tidak valid. Gunakan nomor internasional tanpa tanda +.",
             ),
           );
           return;
@@ -113,9 +124,9 @@ async function startBot() {
     } else {
       console.log(
         chalk.yellow(
-          "ℹ️ Mode Terminal Lokal Aktif (BOT_NUMBER tidak diisi).\n" +
-            "» QR Code akan ditampilkan di bawah untuk di-scan.\n" +
-            "» Tip: Jika ingin memakai kode pairing, set BOT_NUMBER di file .env\n",
+          "[MODE] Terminal aktif (BOT_NUMBER kosong).\n" +
+            "» QR code akan ditampilkan di bawah.\n" +
+            "» Isi BOT_NUMBER jika ingin memakai kode pairing.\n",
         ),
       );
     }
@@ -147,7 +158,7 @@ async function startBot() {
     const { connection, lastDisconnect, qr } = update;
 
     // Tampilkan QR Code di terminal jika belum terhubung dan tidak memakai pairing code
-    if (qr && !usePairingCode && !piyo.authState.creds.registered) {
+    if (qr && !usePairingCode && !state.creds.registered) {
       console.log(
         chalk.cyan("\n[QR CODE] Scan kode QR berikut via WhatsApp > Perangkat Tertaut:"),
       );
@@ -168,7 +179,7 @@ async function startBot() {
       } else {
         console.log(
           chalk.bgRed.white(
-            " ⚠️ Sesi logout dari WhatsApp. Silakan hapus folder 'session-baileys' dan hubungkan ulang. ⚠️ ",
+            "Sesi WhatsApp logout. Hapus folder 'session-baileys' lalu hubungkan ulang.",
           ),
         );
       }
@@ -228,5 +239,5 @@ app.get("/health", (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`🌐 Web Server pancingan aktif di port :${port} (Ready untuk Back4app Keep-Alive)`);
+  console.log(`[WEB] Health server aktif di port ${port}.`);
 });

@@ -75,7 +75,7 @@ async function createVoiceNote(text) {
       ptt: true,
     };
   } catch (err) {
-    // Fallback jika FFmpeg tidak terpasang di sistem hosting (misal container Back4app)
+    // Fallback for hosts where FFmpeg is unavailable.
     return {
       audio: mp3Buffer,
       mimetype: "audio/mp4",

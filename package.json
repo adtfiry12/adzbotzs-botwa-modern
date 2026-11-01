@@ -9,8 +9,9 @@
   "keywords": [],
   "author": "",
   "license": "AGPL-3.0-only",
-  "description": "Cyberpunk-styled multi-device WhatsApp bot built with Node.js and Baileys",
+  "description": "Multi-device WhatsApp bot built with Node.js and Baileys",
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@google/genai": "^2.31.0",
     "@whiskeysockets/baileys": "^7.0.0-rc14",
     "axios": "^1.21.0",

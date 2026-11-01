@@ -34,7 +34,6 @@ if (needsSsl) {
 
 const db = mysql.createPool(poolConfig);
 
-// Auto-inisialisasi tabel database saat pertama kali tersambung
 async function initDatabase() {
   try {
     await db.query(`
@@ -75,15 +74,17 @@ async function initDatabase() {
     }
 
     console.log(
-      `🔌 Modul Database MySQL (${needsSsl ? "TiDB Cloud" : "Local"}) Terhubung & Siap!`,
+      `[DB] MySQL (${needsSsl ? "cloud" : "local"}) siap.`,
     );
   } catch (error) {
     console.warn(
-      `⚠️ Peringatan DB: Gagal inisialisasi tabel (${error.message}). Fitur berbasis database mungkin terbatas.`,
+      `[DB] Inisialisasi gagal: ${error.message}`,
     );
+    return false;
   }
 }
 
-initDatabase();
+const ready = initDatabase();
 
 module.exports = db;
+module.exports.ready = ready;

@@ -31,7 +31,7 @@ async function relayTargetReply(piyo, msg, body) {
 
   await piyo.sendMessage(conversation.senderJid, {
     text:
-      `💬 *BALASAN MENFESS*\n\n` +
+      `╭─〔 BALASAN MENFESS 〕\n` +
       `Target membalas:\n\n_“${body.trim()}”_\n\n` +
       `Balas dengan *.balas <pesan>* untuk mengirim jawaban anonim.`,
   });
@@ -50,7 +50,7 @@ async function sendSenderReply(piyo, senderJid, text) {
 
   await piyo.sendMessage(conversation.targetJid, {
     text:
-      `💌 *BALASAN MENFESS*\n\n` +
+      `╭─〔 BALASAN MENFESS 〕\n` +
       `Ada balasan anonim untuk lu:\n\n_“${text.trim()}”_`,
   });
 
