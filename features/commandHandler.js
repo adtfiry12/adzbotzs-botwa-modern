@@ -29,6 +29,7 @@ const {
   registerConversation,
   endConversation,
   getConversation,
+  getMessageJids,
   relayTargetReply,
   sendSenderReply,
 } = require("./menfess");
@@ -74,6 +75,45 @@ function normalizePhoneNumber(value) {
   if (digits.startsWith("0")) return `62${digits.slice(1)}`;
   if (digits.startsWith("8")) return `62${digits}`;
   return digits;
+}
+
+function describeWeatherCode(code) {
+  const descriptions = {
+    0: "Cerah",
+    1: "Cerah sebagian",
+    2: "Berawan sebagian",
+    3: "Mendung",
+    45: "Berkabut",
+    48: "Kabut tebal",
+    51: "Gerimis ringan",
+    53: "Gerimis sedang",
+    55: "Gerimis lebat",
+    56: "Gerimis beku ringan",
+    57: "Gerimis beku lebat",
+    61: "Hujan ringan",
+    63: "Hujan sedang",
+    65: "Hujan lebat",
+    66: "Hujan beku ringan",
+    67: "Hujan beku lebat",
+    71: "Salju ringan",
+    73: "Salju sedang",
+    75: "Salju lebat",
+    77: "Butiran salju",
+    80: "Hujan singkat ringan",
+    81: "Hujan singkat sedang",
+    82: "Hujan singkat lebat",
+    85: "Hujan salju ringan",
+    86: "Hujan salju lebat",
+    95: "Badai petir",
+    96: "Badai petir dengan hujan es ringan",
+    99: "Badai petir dengan hujan es lebat",
+  };
+  return descriptions[code] || "Kondisi tidak diketahui";
+}
+
+function describeWindDirection(degrees) {
+  const directions = ["U", "TL", "T", "TG", "S", "BD", "B", "BL"];
+  return directions[Math.round(Number(degrees || 0) / 45) % 8];
 }
 
 function isOwnerMessage(msg) {
@@ -209,7 +249,6 @@ function buildMenu(prefix, category, owner) {
       `┃ ▸ *${prefix}rank*          — level dan XP\n` +
       `┃ ▸ *${prefix}afk [alasan]*  — status away\n` +
       `┃ ▸ *${prefix}jokes*         — jokes acak\n` +
-      `┃ ▸ *${prefix}cuaca [kota]*  — info cuaca\n` +
       `┗━━━━━━━━━━━━━━━━━━━━━━━━━━`,
     group:
       `╔══════════════════════════════╗\n` +
@@ -940,10 +979,14 @@ module.exports = async (piyo, msg) => {
           }
         } catch (err) {
           console.error("Error Gemini AI:", err);
+          const errorMessage =
+            err?.message === "Permintaan AI terlalu lama"
+              ? "× AI sedang sibuk atau koneksi lambat. Coba lagi sebentar."
+              : "× AI sedang tidak tersedia. Coba lagi sebentar.";
           await sendBotMessage(piyo,
             from,
             {
-              text: "× Waduh, otak AI-nya lagi nge-hang bro. Coba lagi nanti.",
+              text: errorMessage,
             },
             { quoted: msg },
           );
@@ -1162,7 +1205,12 @@ module.exports = async (piyo, msg) => {
           console.error("Error Gemini Vision:", error);
           await sendBotMessage(piyo,
             from,
-            { text: "AI gagal menganalisis gambar. Coba foto lain." },
+            {
+              text:
+                error?.message === "Analisis gambar terlalu lama"
+                  ? "× Analisis gambar terlalu lama. Coba lagi dengan foto yang lebih kecil."
+                  : "× AI gagal menganalisis gambar. Coba foto lain.",
+            },
             { quoted: msg },
           );
         }
@@ -1441,7 +1489,7 @@ module.exports = async (piyo, msg) => {
         }
 
         try {
-          const sent = await sendSenderReply(piyo, from, q);
+          const sent = await sendSenderReply(piyo, getMessageJids(msg), q);
           await sendBotMessage(piyo,
             from,
             {
@@ -1674,23 +1722,47 @@ module.exports = async (piyo, msg) => {
           );
         }
         try {
-          const weather = await axios.get(
-            `https://wttr.in/${encodeURIComponent(q)}?format=j1`,
-            { timeout: 15000 },
+          const locationResponse = await axios.get(
+            "https://geocoding-api.open-meteo.com/v1/search",
+            {
+              params: {
+                name: q,
+                count: 1,
+                language: "id",
+                format: "json",
+                countryCode: "ID",
+              },
+              timeout: 15000,
+            },
           );
-          const current = weather.data?.current_condition?.[0];
-          const area = weather.data?.nearest_area?.[0];
+          const location = locationResponse.data?.results?.[0];
+          if (!location) throw new Error("Lokasi tidak ditemukan");
+
+          const weatherResponse = await axios.get(
+            "https://api.open-meteo.com/v1/forecast",
+            {
+              params: {
+                latitude: location.latitude,
+                longitude: location.longitude,
+                current:
+                  "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m",
+                timezone: "auto",
+              },
+              timeout: 15000,
+            },
+          );
+          const current = weatherResponse.data?.current;
           if (!current) throw new Error("Data cuaca kosong");
           await sendBotMessage(piyo,
             from,
             {
               text: formatPanel("CUACA", [
-                `Lokasi: ${area?.areaName?.[0]?.value || q}`,
-                `Kondisi: ${current.weatherDesc?.[0]?.value || "-"}`,
-                `Suhu: ${current.temp_C}°C`,
-                `Terasa: ${current.FeelsLikeC}°C`,
-                `Kelembapan: ${current.humidity}%`,
-                `Angin: ${current.windspeedKmph} km/jam`,
+                `Lokasi: ${location.name}, ${location.admin1 || "Indonesia"}`,
+                `Kondisi: ${describeWeatherCode(current.weather_code)}`,
+                `Suhu: ${Math.round(current.temperature_2m)}°C`,
+                `Terasa: ${Math.round(current.apparent_temperature)}°C`,
+                `Kelembapan: ${current.relative_humidity_2m}%`,
+                `Angin: ${Math.round(current.wind_speed_10m)} km/jam ${describeWindDirection(current.wind_direction_10m)}`,
               ]),
             },
             { quoted: msg },

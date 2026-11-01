@@ -38,10 +38,29 @@ function getActiveConversation(conversation) {
   return conversation;
 }
 
+function getMessageJids(msg) {
+  const key = msg?.key || {};
+  return [
+    key.remoteJid,
+    key.remoteJidAlt,
+    key.participant,
+    key.participantAlt,
+    key.senderPn,
+  ].filter(Boolean);
+}
+
+function findConversationByJids(jids, conversations) {
+  for (const jid of jids) {
+    const conversation = conversations.get(jid);
+    if (conversation) return getActiveConversation(conversation);
+  }
+  return null;
+}
+
 async function relayTargetReply(piyo, msg, body) {
-  const targetJid = msg.key.remoteJid;
-  const conversation = getActiveConversation(
-    conversationsByTarget.get(targetJid),
+  const conversation = findConversationByJids(
+    getMessageJids(msg),
+    conversationsByTarget,
   );
 
   if (!conversation || !body.trim()) return false;
@@ -61,8 +80,10 @@ async function relayTargetReply(piyo, msg, body) {
 async function sendSenderReply(piyo, senderJid, text) {
   if (!text?.trim()) return false;
 
-  const conversation = getActiveConversation(
-    conversationsBySender.get(senderJid),
+  const senderJids = Array.isArray(senderJid) ? senderJid : [senderJid];
+  const conversation = findConversationByJids(
+    senderJids,
+    conversationsBySender,
   );
 
   if (!conversation) {
@@ -84,6 +105,7 @@ module.exports = {
   registerConversation,
   endConversation,
   getConversation,
+  getMessageJids,
   relayTargetReply,
   sendSenderReply,
 };

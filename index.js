@@ -25,7 +25,36 @@ const HandleMsg = require("./HandleMsg");
 const config = require("./config");
 const { getGroupSettings } = require("./features/groupSettings");
 
+const originalConsoleInfo = console.info.bind(console);
+console.info = (...args) => {
+  if (args[0] === "Closing session:") return;
+  originalConsoleInfo(...args);
+};
+
 let isBotStarting = false;
+const processedMessageIds = new Set();
+const processedMessageQueue = [];
+const MAX_PROCESSED_MESSAGE_IDS = 5000;
+
+function wasMessageProcessed(msg) {
+  const key = msg?.key || {};
+  const messageId = key.id;
+  if (!messageId) return false;
+
+  const uniqueId = [
+    key.remoteJid || "",
+    key.participant || "",
+    messageId,
+  ].join(":");
+  if (processedMessageIds.has(uniqueId)) return true;
+
+  processedMessageIds.add(uniqueId);
+  processedMessageQueue.push(uniqueId);
+  if (processedMessageQueue.length > MAX_PROCESSED_MESSAGE_IDS) {
+    processedMessageIds.delete(processedMessageQueue.shift());
+  }
+  return false;
+}
 
 async function startBot() {
   if (isBotStarting) return;
@@ -197,6 +226,7 @@ async function startBot() {
   piyo.ev.on("messages.upsert", async (m) => {
     const msg = m.messages?.[0];
     if (!msg || m.type !== "notify") return;
+    if (wasMessageProcessed(msg)) return;
 
     const messageText =
       msg?.message?.conversation ||
