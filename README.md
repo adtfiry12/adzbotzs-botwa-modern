@@ -1,5 +1,9 @@
 # ADZBOTZS
 
+<p align="center">
+  <img src="./assets/menu-logo.png" alt="ADZBOTZS" width="720">
+</p>
+
 Bot WhatsApp berbasis Node.js, Baileys, MySQL-compatible database, Gemini, dan
 FFmpeg. Bisa dijalankan dari terminal atau hosting yang mendukung proses Node.js
 yang berjalan terus.
